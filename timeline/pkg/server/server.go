@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
@@ -50,7 +51,7 @@ func (s *Server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if lastPostAt = r.URL.Query().Get("last_post_at"); lastPostAt == "" {
-		lastPostAt = "2023-04-29T09:31:00.000Z"
+		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z")
 	}
 	postCountStr = r.URL.Query().Get("max_post_count")
 	postCount, err := strconv.Atoi(postCountStr)
