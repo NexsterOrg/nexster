@@ -3,7 +3,8 @@ package social_graph
 import (
 	"context"
 
-	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
+	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
 )
 
 // TODO
@@ -27,32 +28,34 @@ const suggestFriendsQuery string = `FOR v,e,p IN 2..2 OUTBOUND
 	RETURN { "user_id" : v.user_id, "username" : v.username, "image_url": v.image_url }`
 
 type socialGraph struct {
-	graph argdb.Interface
+	mediaRepo mrepo.Interface
+	userRepo  urepo.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewRepo(argdbInterface argdb.Interface) *socialGraph {
+func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface) *socialGraph {
 	return &socialGraph{
-		graph: argdbInterface,
+		mediaRepo: mIntfce,
+		userRepo:  uIntfce,
 	}
 }
 
-func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) (Posts, error) {
+func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) ([]*mrepo.Media, error) {
 	bindVars := map[string]interface{}{
-		"userNode":   sgr.graph.CreateDocId(UsersDoc, userId),
+		"userNode":   sgr.userRepo.MkUserDocId(userId),
 		"lastPostAt": lastPostTimestamp,
 		"noOfPosts":  noOfPosts,
 		"visibility": visibility,
 	}
-	return sgr.graph.ListMedia(ctx, recentMediaQuery, bindVars)
+	return sgr.mediaRepo.ListMedia(ctx, recentMediaQuery, bindVars)
 }
 
-func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, startedThreshold string, noOfSuggestions int) (Users, error) {
+func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, startedThreshold string, noOfSuggestions int) ([]*urepo.User, error) {
 	bindVars := map[string]interface{}{
-		"userNode":         sgr.graph.CreateDocId(UsersDoc, userId),
+		"userNode":         sgr.userRepo.MkUserDocId(userId),
 		"startedThreshold": startedThreshold,
 		"noOfSuggestions":  noOfSuggestions,
 	}
-	return sgr.graph.ListUsers(ctx, suggestFriendsQuery, bindVars)
+	return sgr.userRepo.ListUsers(ctx, suggestFriendsQuery, bindVars)
 }

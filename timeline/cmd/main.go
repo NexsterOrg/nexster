@@ -9,6 +9,8 @@ import (
 	lg "github.com/labstack/gommon/log"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
+	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
@@ -27,7 +29,11 @@ func main() {
 
 	router := httprouter.New()
 	argdbClient := argdb.NewDbClient(ctx, argdbCfg)
-	sociGrphCtrler := socigr.NewRepo(argdbClient)
+
+	mediaRepo := mrepo.NewRepo(argdbClient)
+	userRepo := urepo.NewRepo(argdbClient)
+
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/timeline/recent_posts", srv.ListRecentPostsForTimeline)
