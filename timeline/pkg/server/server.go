@@ -15,16 +15,20 @@ import (
 )
 
 const (
-	defaultPostCount int = 10
+	defaultPostCount  int    = 10
+	defaultFriendSugs int    = 10
+	defaultDate       string = "2023-01-01T01:00:00.000Z"
 )
 
-type Server struct {
+type server struct {
 	scGraph socigr.Interface
 	logger  *lg.Logger
 }
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger) *Server {
-	return &Server{
+var _ Interface = (*server)(nil)
+
+func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
+	return &server{
 		scGraph: sgrInterface,
 		logger:  logger,
 	}
@@ -34,7 +38,7 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *Server {
  * Retrieve list of most recent posts before the given time threshold.
  * Query Parameters : userid, type, last_post_at, max_post_count
  */
-func (s *Server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userId, visibility, lastPostAt, postCountStr string
 	ctx := context.Background()
 	emptyArr, _ := json.Marshal([]int{})
@@ -64,7 +68,7 @@ func (s *Server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 
 	content, err := s.scGraph.ListRecentPosts(ctx, userId, lastPostAt, visibility, postCount)
 	if err != nil {
-		s.logger.Errorf("failed list recent posts due to %v", err)
+		s.logger.Errorf("failed list recent posts due to %w", err)
 		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
 		w.Write(emptyArr)
 		return
@@ -84,7 +88,53 @@ func (s *Server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	w.Write(body)
 }
 
-func (s *Server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
+func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userId, startedAt, noOfSugStr string
+	ctx := context.Background()
+	emptyArr, _ := json.Marshal([]int{})
+	if userId = r.URL.Query().Get("userid"); userId == "" {
+		s.logger.Errorf("failed list friend suggestions since userid query parameter is empty")
+		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+	if startedAt = r.URL.Query().Get("started_at"); startedAt == "" {
+		startedAt = defaultDate
+	}
+	noOfSugStr = r.URL.Query().Get("max_sugs")
+	noOfSugs, err := strconv.Atoi(noOfSugStr)
+	if err != nil {
+		noOfSugs = defaultFriendSugs
+	}
+
+	// TODO
+	// Need to create arango db id for the user using userid. This following line is a temporary work
+	userNode := fmt.Sprintf("users/%s", userId)
+
+	content, err := s.scGraph.ListFriendSuggestions(ctx, userNode, startedAt, noOfSugs)
+	if err != nil {
+		s.logger.Errorf("failed list friend suggestions due to %w", err)
+		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+
+	s.setResponseHeaders(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	})
+	if content == nil {
+		w.Write(emptyArr)
+		return
+	}
+	body, err := json.Marshal(content)
+	if err != nil {
+		s.logger.Errorf("failed convert the list of friend suggestions into json for due to %w", err)
+	}
+	w.Write(body)
+}
+
+func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
 	for key, val := range headers {
 		w.Header().Add(key, val)
 	}

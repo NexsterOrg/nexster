@@ -30,7 +30,8 @@ func main() {
 	sociGrphCtrler := socigr.NewRepo(argdbClient)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/timeline/fetch_posts", srv.ListRecentPostsForTimeline)
+	router.GET("/timeline/recent_posts", srv.ListRecentPostsForTimeline)
+	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 
 	log.Println("Listen....8000")
 	log.Fatal(http.ListenAndServe(":8000", router))
