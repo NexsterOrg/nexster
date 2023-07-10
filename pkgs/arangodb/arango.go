@@ -64,3 +64,24 @@ func (cl *Client) ListMedia(ctx context.Context, query string, bindVars map[stri
 		posts = append(posts, &post)
 	}
 }
+
+func (cl *Client) ListUsers(ctx context.Context, query string, bindVars map[string]interface{}) ([]*User, error) {
+	var users []*User
+	cursor, err := cl.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return users, err
+	}
+	defer cursor.Close()
+
+	for {
+		var user User
+		_, err := cursor.ReadDocument(ctx, &user)
+		if driver.IsNoMoreDocuments(err) {
+			return users, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		users = append(users, &user)
+	}
+}
