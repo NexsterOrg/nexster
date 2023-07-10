@@ -2,32 +2,36 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+	lg "github.com/labstack/gommon/log"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
-	grepo "github.com/NamalSanjaya/nexster/timeline/pkg/repo/graph"
+	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
+	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
 
 func main() {
 	ctx := context.Background()
 	argdbCfg := &argdb.Config{
-		Hostname: "---",
+		Hostname: "--",
 		Database: "--",
 		Username: "--",
 		Password: "--",
 		Port:     8529,
 	}
+	logger := lg.New("nexster-timeline")
+	logger.EnableColor()
+
+	router := httprouter.New()
 	argdbClient := argdb.NewDbClient(ctx, argdbCfg)
-	grpController := grepo.NewRepo(argdbClient)
+	sociGrphCtrler := socigr.NewRepo(argdbClient)
+	srv := tsrv.New(sociGrphCtrler, logger)
 
-	posts, err := grpController.GetPostsForTimeline(ctx, "users/482191", "2023-04-29T09:31:00.000Z", 3)
-	if err != nil {
-		log.Fatal(err)
-	}
+	router.GET("/timeline/fetch_posts", srv.ListRecentPostsForTimeline)
 
-	for _, post := range posts {
-		fmt.Printf("%+v\n", *post)
-	}
-	fmt.Println("--done--")
+	log.Println("Listen....8000")
+	log.Fatal(http.ListenAndServe(":8000", router))
 }
