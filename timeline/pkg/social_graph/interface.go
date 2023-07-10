@@ -6,6 +6,10 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
 
+const (
+	UsersDoc string = "users"
+)
+
 type Posts []*argdb.Media
 
 type Users []*argdb.User

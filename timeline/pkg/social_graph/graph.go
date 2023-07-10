@@ -40,7 +40,7 @@ func NewRepo(argdbInterface argdb.Interface) *socialGraph {
 
 func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) (Posts, error) {
 	bindVars := map[string]interface{}{
-		"userNode":   sgr.graph.CreateDocId(argdb.UsersDoc, userId),
+		"userNode":   sgr.graph.CreateDocId(UsersDoc, userId),
 		"lastPostAt": lastPostTimestamp,
 		"noOfPosts":  noOfPosts,
 		"visibility": visibility,
@@ -50,7 +50,7 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 
 func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, startedThreshold string, noOfSuggestions int) (Users, error) {
 	bindVars := map[string]interface{}{
-		"userNode":         sgr.graph.CreateDocId(argdb.UsersDoc, userId),
+		"userNode":         sgr.graph.CreateDocId(UsersDoc, userId),
 		"startedThreshold": startedThreshold,
 		"noOfSuggestions":  noOfSuggestions,
 	}

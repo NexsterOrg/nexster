@@ -4,10 +4,6 @@ import (
 	"context"
 )
 
-const (
-	UsersDoc string = "users"
-)
-
 type Interface interface {
 	ListMedia(ctx context.Context, query string, bindVars map[string]interface{}) ([]*Media, error)
 	ListUsers(ctx context.Context, query string, bindVars map[string]interface{}) ([]*User, error)
