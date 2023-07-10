@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -62,9 +61,6 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		postCount = defaultPostCount
 	}
-	// TODO
-	// Need to create arango db id for the user using userid. This following line is a temporary work
-	userId = fmt.Sprintf("users/%s", userId)
 
 	content, err := s.scGraph.ListRecentPosts(ctx, userId, lastPostAt, visibility, postCount)
 	if err != nil {
@@ -107,11 +103,7 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 		noOfSugs = defaultFriendSugs
 	}
 
-	// TODO
-	// Need to create arango db id for the user using userid. This following line is a temporary work
-	userNode := fmt.Sprintf("users/%s", userId)
-
-	content, err := s.scGraph.ListFriendSuggestions(ctx, userNode, startedAt, noOfSugs)
+	content, err := s.scGraph.ListFriendSuggestions(ctx, userId, startedAt, noOfSugs)
 	if err != nil {
 		s.logger.Errorf("failed list friend suggestions due to %w", err)
 		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})

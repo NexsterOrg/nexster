@@ -85,3 +85,7 @@ func (cl *Client) ListUsers(ctx context.Context, query string, bindVars map[stri
 		users = append(users, &user)
 	}
 }
+
+func (cl *Client) CreateDocId(doc, key string) string {
+	return fmt.Sprintf("%s/%s", doc, key)
+}
