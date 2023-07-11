@@ -21,7 +21,7 @@ type reactionRepo struct {
 	argClient *argdb.Client
 }
 
-// var _ Interface = (*reactionRepo)(nil)
+var _ Interface = (*reactionRepo)(nil)
 
 func NewRepo(argClient *argdb.Client) *reactionRepo {
 	return &reactionRepo{argClient: argClient}

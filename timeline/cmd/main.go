@@ -25,7 +25,7 @@ func main() {
 		Password: "--",
 		Port:     8529,
 	}
-	logger := lg.New("nexster-timeline")
+	logger := lg.New("Timeline")
 	logger.EnableColor()
 
 	router := httprouter.New()
