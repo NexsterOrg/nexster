@@ -14,18 +14,17 @@ type Config struct {
 }
 
 type Client struct {
-	Db driver.Database
+	Db   driver.Database
+	Coll driver.CollectionDocuments
 }
 
-// Create new client with arango db
-func NewDbClient(ctx context.Context, cfg *Config) *Client {
+func newClient(cfg *Config) driver.Client {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{fmt.Sprintf("http://%s:%d", cfg.Hostname, cfg.Port)},
 	})
 	if err != nil {
 		panic(err)
 	}
-
 	client, err := driver.NewClient(driver.ClientConfig{
 		Connection:     conn,
 		Authentication: driver.BasicAuthentication(cfg.Username, cfg.Password),
@@ -33,10 +32,29 @@ func NewDbClient(ctx context.Context, cfg *Config) *Client {
 	if err != nil {
 		panic(err)
 	}
+	return client
+}
 
+// Create new client to work with db
+func NewDbClient(ctx context.Context, cfg *Config) *Client {
+	client := newClient(cfg)
 	db, err := client.Database(ctx, cfg.Database)
 	if err != nil {
 		panic(err)
 	}
 	return &Client{Db: db}
+}
+
+// Create new client to work with specific collection
+func NewCollClient(ctx context.Context, cfg *Config, collection string) *Client {
+	client := newClient(cfg)
+	db, err := client.Database(ctx, cfg.Database)
+	if err != nil {
+		panic(err)
+	}
+	coll, err := db.Collection(ctx, collection)
+	if err != nil {
+		panic(err)
+	}
+	return &Client{Db: db, Coll: coll}
 }
