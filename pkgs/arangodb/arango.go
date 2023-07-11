@@ -13,6 +13,8 @@ type Config struct {
 	Port                                   int
 }
 
+// TODO:
+// Need two seperate clients for Db and collection
 type Client struct {
 	Db   driver.Database
 	Coll driver.CollectionDocuments
