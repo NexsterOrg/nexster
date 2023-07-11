@@ -4,6 +4,7 @@ import (
 	"context"
 
 	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
+	rrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/reaction"
 	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
 )
 
@@ -30,14 +31,16 @@ const suggestFriendsQuery string = `FOR v,e,p IN 2..2 OUTBOUND
 type socialGraph struct {
 	mediaRepo mrepo.Interface
 	userRepo  urepo.Interface
+	reactRepo rrepo.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface) *socialGraph {
+func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface) *socialGraph {
 	return &socialGraph{
 		mediaRepo: mIntfce,
 		userRepo:  uIntfce,
+		reactRepo: rIntfce,
 	}
 }
 
@@ -58,4 +61,8 @@ func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, start
 		"noOfSuggestions":  noOfSuggestions,
 	}
 	return sgr.userRepo.ListUsers(ctx, suggestFriendsQuery, bindVars)
+}
+
+func (sgr *socialGraph) UpdateMediaReaction(ctx context.Context, fromUserKey, toMediaKey, key string, newDoc map[string]interface{}) error {
+	return sgr.reactRepo.UpdateReactions(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), key, newDoc)
 }
