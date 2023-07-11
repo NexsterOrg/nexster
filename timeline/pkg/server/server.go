@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -126,9 +127,58 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 	w.Write(body)
 }
 
+func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var fromUserKey, toMediaKey, reactionKey string
+	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
+		s.logger.Errorf("failed update media reaction since reactor_id query parameter is empty")
+		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		return
+	}
+
+	if toMediaKey = r.URL.Query().Get("media_id"); toMediaKey == "" {
+		s.logger.Errorf("failed update media reaction since media_id query parameter is empty")
+		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		return
+	}
+
+	if reactionKey = r.URL.Query().Get("reaction_id"); reactionKey == "" {
+		s.logger.Errorf("failed update media reaction since reaction_id query parameter is empty")
+		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		return
+	}
+
+	data, err := s.readReactionJson(r)
+	if err != nil {
+		s.logger.Errorf("Unable to read the request body since request body in wrong format")
+		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		return
+	}
+	ctx := context.Background()
+	err = s.scGraph.UpdateMediaReaction(ctx, fromUserKey, toMediaKey, reactionKey, data)
+	if err != nil {
+		s.logger.Errorf("Failed to Update reaction with id %s for media id %s due %v\n", fromUserKey, toMediaKey, err)
+		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
+		return
+	}
+	s.setResponseHeaders(w, http.StatusOK, map[string]string{Date: ""})
+}
+
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
 	for key, val := range headers {
 		w.Header().Add(key, val)
 	}
 	w.WriteHeader(statusCode)
+}
+
+func (s *server) readReactionJson(r *http.Request) (map[string]interface{}, error) {
+	var data map[string]interface{}
+	b, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		return data, err
+	}
+	if err = json.Unmarshal(b, &data); err != nil {
+		return data, err
+	}
+	return data, nil
 }
