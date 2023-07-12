@@ -36,6 +36,8 @@ func main() {
 
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
 
+	router.DELETE("/usrmgmt/friend_req/:friend_req_id", srv.RemovePendingFriendReq)
+
 	log.Println("Listen....8000")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }

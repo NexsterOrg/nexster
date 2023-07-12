@@ -13,6 +13,11 @@ import (
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
 
+const (
+	failed  string = "failed"
+	success string = "success"
+)
+
 type server struct {
 	scGraph socigr.Interface
 	logger  *lg.Logger
@@ -34,7 +39,7 @@ func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httpr
 		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
 		resp, _ := json.Marshal(map[string]string{
 			"state":   "failed",
-			"err_msg": "request body is in wrong format",
+			"message": "request body is in wrong format",
 		})
 		w.Write(resp)
 		return
@@ -44,7 +49,7 @@ func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httpr
 		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
 		resp, _ := json.Marshal(map[string]string{
 			"state":   "failed",
-			"err_msg": "required fields are missing in request body",
+			"message": "required fields are missing in request body",
 		})
 		w.Write(resp)
 		return
@@ -56,7 +61,7 @@ func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httpr
 		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
 		resp, _ := json.Marshal(map[string]string{
 			"state":   "failed",
-			"err_msg": "failed to create required resources",
+			"message": "failed to create required resources",
 		})
 		w.Write(resp)
 		return
@@ -66,6 +71,31 @@ func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httpr
 		"state": "success",
 	})
 	w.Write(resp)
+}
+
+func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	friendReqId := p.ByName("friend_req_id")
+	if friendReqId == "" {
+		s.logger.Error("unable to remove friend request edge since friend_request_id is empty")
+		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]string{
+			"state":   failed,
+			"message": "friend_request_id is empty",
+		})
+		return
+	}
+	err := s.scGraph.RemoveFriendRequest(context.Background(), friendReqId)
+	if err != nil {
+		s.logger.Errorf("failed to remove friend request edge due to %v", err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{Date: ""}, map[string]string{
+			"state":   failed,
+			"message": "failed to remove friend request",
+		})
+		return
+	}
+
+	s.sendRespMsg(w, http.StatusOK, map[string]string{Date: ""}, map[string]string{
+		"state": success,
+	})
 }
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
@@ -86,4 +116,13 @@ func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, heade
 		w.Header().Add(key, val)
 	}
 	w.WriteHeader(statusCode)
+}
+
+func (s *server) sendRespMsg(w http.ResponseWriter, statusCode int, headers map[string]string, body map[string]string) {
+	for key, val := range headers {
+		w.Header().Add(key, val)
+	}
+	w.WriteHeader(statusCode)
+	resp, _ := json.Marshal(body)
+	w.Write(resp)
 }

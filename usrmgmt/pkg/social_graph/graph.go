@@ -45,3 +45,7 @@ func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendK
 		ReqDate: reqDate,
 	})
 }
+
+func (sgr *socialGraph) RemoveFriendRequest(ctx context.Context, key string) error {
+	return sgr.fReqCtrler.RemoveFriendReqEdge(ctx, key)
+}

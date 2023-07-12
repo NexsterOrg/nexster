@@ -17,6 +17,7 @@ type Interface interface {
 	UpdateFriendReq(ctx context.Context, key string, updateDoc map[string]interface{}) error
 	MkFriendReqDocId(key string) string
 	IsFriendReqExist(ctx context.Context, query string, bindVars map[string]interface{}) (bool, error)
+	RemoveFriendReqEdge(ctx context.Context, key string) error
 }
 
 type FriendRequest struct {

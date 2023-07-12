@@ -65,6 +65,11 @@ func (fr *friendReqCtrler) IsFriendReqExist(ctx context.Context, query string, b
 	}
 }
 
+func (fr *friendReqCtrler) RemoveFriendReqEdge(ctx context.Context, key string) error {
+	_, err := fr.argClient.Coll.RemoveDocument(ctx, key)
+	return err
+}
+
 func convertBody(doc map[string]interface{}) (map[string]string, error) {
 	newDoc := map[string]string{}
 	for key, val := range doc {

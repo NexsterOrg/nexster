@@ -1,5 +1,11 @@
 package server
 
+import (
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
+
 // message body information
 const ContentType string = "Content-Type"
 const ContentLength string = "Content-Length"
@@ -10,6 +16,7 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type Interface interface {
+	RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type FriendRequest struct {
