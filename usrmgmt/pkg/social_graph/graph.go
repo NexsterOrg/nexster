@@ -110,3 +110,10 @@ func (sgr *socialGraph) CreateFriend(ctx context.Context, friendReqKey, user1, u
 
 	return results, nil
 }
+
+func (sgr *socialGraph) RemoveFriend(ctx context.Context, key1, key2 string) error {
+	if err := sgr.frndCtrler.RemoveFriendEdge(ctx, key1); err != nil {
+		return err
+	}
+	return sgr.frndCtrler.RemoveFriendEdge(ctx, key2)
+}

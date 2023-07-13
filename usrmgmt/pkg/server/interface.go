@@ -16,7 +16,10 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type Interface interface {
+	HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type FriendRequest struct {

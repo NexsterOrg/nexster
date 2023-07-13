@@ -144,6 +144,52 @@ func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p http
 	})
 }
 
+func (s *server) RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	friendId := p.ByName("friend_id")
+	if friendId == "" {
+		s.logger.Errorf("failed to remove friend edge of since friend_id is empty", friendId)
+		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state":   failed,
+			"message": "friend_id is empty",
+		})
+		return
+	}
+
+	toKey := r.URL.Query().Get("to_friend_id")
+	if toKey == "" {
+		s.logger.Errorf("failed to remove friend edge of since to user friend_id is empty", friendId)
+		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state":   failed,
+			"message": "friend_id in query parameter is empty",
+		})
+		return
+	}
+
+	if err := s.scGraph.RemoveFriend(context.Background(), friendId, toKey); err != nil {
+		s.logger.Errorf("failed to remove friend edge of %s due to %v", friendId, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state":   failed,
+			"message": "server failed to remove resource",
+		})
+		return
+	}
+	s.sendRespMsg(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}, map[string]interface{}{
+		"state": success,
+	})
+}
+
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 	data := &FriendRequest{}
 	b, err := ioutil.ReadAll(r.Body)
