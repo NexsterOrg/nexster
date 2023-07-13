@@ -3,9 +3,9 @@ package social_graph
 import (
 	"context"
 
-	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
-	rrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/reaction"
-	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
+	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
+	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
+	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 )
 
 // TODO

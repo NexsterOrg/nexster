@@ -9,6 +9,8 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
 
+const ReactionColl string = "reactions"
+
 const (
 	like       string = "like"
 	love       string = "love"

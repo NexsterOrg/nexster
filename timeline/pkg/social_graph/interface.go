@@ -3,8 +3,8 @@ package social_graph
 import (
 	"context"
 
-	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
-	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
+	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
+	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 )
 
 type Interface interface {

@@ -9,9 +9,9 @@ import (
 	lg "github.com/labstack/gommon/log"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
-	mrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/media"
-	rrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/reaction"
-	urepo "github.com/NamalSanjaya/nexster/timeline/pkg/repos/user"
+	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
+	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
+	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
@@ -30,7 +30,7 @@ func main() {
 
 	router := httprouter.New()
 	argdbClient := argdb.NewDbClient(ctx, argdbCfg)
-	argCollClient := argdb.NewCollClient(ctx, argdbCfg, "reactions")
+	argCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
 
 	mediaRepo := mrepo.NewRepo(argdbClient)
 	userRepo := urepo.NewRepo(argdbClient)
