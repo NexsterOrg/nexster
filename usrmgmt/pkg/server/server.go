@@ -33,44 +33,41 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
 }
 
 func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	results := map[string]string{}
 	data, err := s.readFriendReqJson(r)
 	if err != nil {
 		s.logger.Errorf("failed to read json content in friend req, Error: %v", err)
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
-		resp, _ := json.Marshal(map[string]string{
-			"state":   "failed",
+		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
+			"state":   failed,
 			"message": "request body is in wrong format",
+			"data":    results,
 		})
-		w.Write(resp)
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
 		s.logger.Errorf("required fields are not in friend req json content, Error: %v", err)
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
-		resp, _ := json.Marshal(map[string]string{
-			"state":   "failed",
+		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
+			"state":   failed,
 			"message": "required fields are missing in request body",
+			"data":    results,
 		})
-		w.Write(resp)
 		return
 	}
 	ctx := context.Background()
-	err = s.scGraph.CreateFriendReq(ctx, data.From, data.To, data.Mode, data.State, data.ReqDate)
+	results, err = s.scGraph.CreateFriendReq(ctx, data.From, data.To, data.Mode, data.State, data.ReqDate)
 	if err != nil {
 		s.logger.Errorf("failed to create friend req edge in db, Error: %v", err)
-		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
-		resp, _ := json.Marshal(map[string]string{
-			"state":   "failed",
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{Date: ""}, map[string]interface{}{
+			"state":   failed,
 			"message": "failed to create required resources",
+			"data":    results,
 		})
-		w.Write(resp)
 		return
 	}
-	s.setResponseHeaders(w, http.StatusOK, map[string]string{Date: ""})
-	resp, _ := json.Marshal(map[string]string{
-		"state": "success",
+	s.sendRespMsg(w, http.StatusOK, map[string]string{Date: ""}, map[string]interface{}{
+		"state": success,
+		"data":  results,
 	})
-	w.Write(resp)
 }
 
 func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

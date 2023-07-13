@@ -13,7 +13,7 @@ const (
 
 // This is Friend Request data model
 type Interface interface {
-	CreateFriendReqEdge(ctx context.Context, doc *FriendRequest) error
+	CreateFriendReqEdge(ctx context.Context, doc *FriendRequest) (string, error)
 	UpdateFriendReq(ctx context.Context, key string, updateDoc map[string]interface{}) error
 	MkFriendReqDocId(key string) string
 	IsFriendReqExist(ctx context.Context, query string, bindVars map[string]interface{}) (bool, error)

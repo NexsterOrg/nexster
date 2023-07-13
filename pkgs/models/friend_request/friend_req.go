@@ -21,16 +21,17 @@ func NewCtrler(argClient *argdb.Client) *friendReqCtrler {
 }
 
 // TODO:
-// ReqDate time need to be changed once we figure out a solution for ttime differencing issue.
-func (fr *friendReqCtrler) CreateFriendReqEdge(ctx context.Context, doc *FriendRequest) error {
+// 1. ReqDate time need to be changed once we figure out a solution for ttime differencing issue.
+// 2. Friend request edge should only be uni directional(Fix this).
+func (fr *friendReqCtrler) CreateFriendReqEdge(ctx context.Context, doc *FriendRequest) (string, error) {
 	var err error
 	doc.Key = uuid.New().String() // Generate UUID key
 	doc.Kind = kind
 	_, err = fr.argClient.Coll.CreateDocument(ctx, doc)
 	if err != nil {
-		return fmt.Errorf("failed to create friend request edge document for requestor id %s due to %v", doc.From, err)
+		return "", fmt.Errorf("failed to create friend request edge document for requestor id %s due to %v", doc.From, err)
 	}
-	return nil
+	return doc.Key, nil
 }
 
 func (fr *friendReqCtrler) MkFriendReqDocId(key string) string {
@@ -50,6 +51,7 @@ func (fr *friendReqCtrler) UpdateFriendReq(ctx context.Context, key string, upda
 	return nil
 }
 
+// TODO: Refactor the method
 func (fr *friendReqCtrler) IsFriendReqExist(ctx context.Context, query string, bindVars map[string]interface{}) (bool, error) {
 	cursor, err := fr.argClient.Db.Query(ctx, query, bindVars)
 	if err != nil {

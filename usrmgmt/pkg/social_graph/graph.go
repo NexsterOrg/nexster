@@ -10,7 +10,7 @@ import (
 
 const userColl string = "users" // Need to be changed once `users` repo bring to common level
 
-const gettFriendReqEdgeQuery string = `FOR v,e IN 1..1 OUTBOUND
+const gettFriendReqEdgeQuery string = `FOR v,e IN 1..1 ANY
 	@reqstorNode friendRequest
 	OPTIONS { uniqueVertices: "path" }
 	FILTER e.kind == "friend_request" && v._id == @friendNode
@@ -30,7 +30,10 @@ func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface) *socialGr
 	}
 }
 
-func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendKey, mode, state, reqDate string) error {
+// TODO:
+// 1. Need to check the existance of user nodes.
+func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendKey, mode, state, reqDate string) (map[string]string, error) {
+	results := map[string]string{}
 	reqstorId := fmt.Sprintf("%s/%s", userColl, reqstorKey)
 	friendId := fmt.Sprintf("%s/%s", userColl, friendKey)
 
@@ -39,18 +42,32 @@ func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendK
 		"friendNode":  friendId,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get friend req from %s, to %s. Error: %v", reqstorId, friendId, err)
+		return results, fmt.Errorf("failed to get friend req from %s, to %s. Error: %v", reqstorId, friendId, err)
+	}
+	// Return Err, so that upper layer notice as resource not been created
+	if isExist {
+		return results, nil
+	}
+
+	if isExist, err = sgr.frndCtrler.IsFriendEdgeExist(ctx, reqstorId, friendId); err != nil {
+		return results, fmt.Errorf("failed to check the existance of friend edge [from %s, to %s]. Error: %v", reqstorId, friendId, err)
 	}
 	if isExist {
-		return nil
+		return results, nil
 	}
-	return sgr.fReqCtrler.CreateFriendReqEdge(ctx, &freq.FriendRequest{
+
+	newFriendReqkey, err := sgr.fReqCtrler.CreateFriendReqEdge(ctx, &freq.FriendRequest{
 		From:    reqstorId,
 		To:      friendId,
 		Mode:    mode,
 		State:   state,
 		ReqDate: reqDate,
 	})
+	if err != nil {
+		return results, fmt.Errorf("failed to create friend req [from %s, to %s]. Error: %v", reqstorId, friendId, err)
+	}
+	results["friend_req_id"] = newFriendReqkey
+	return results, nil
 }
 
 func (sgr *socialGraph) RemoveFriendRequest(ctx context.Context, key string) error {
