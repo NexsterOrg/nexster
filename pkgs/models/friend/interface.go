@@ -9,6 +9,7 @@ type Interface interface {
 	CreateFriendEdge(ctx context.Context, doc *Friend) (string, error)
 	MkFriendDocId(key string) string
 	RemoveFriendEdge(ctx context.Context, key string) error
+	IsFriendEdgeExist(ctx context.Context, user1, user2 string) (bool, error)
 }
 
 // document format for `friend` edge

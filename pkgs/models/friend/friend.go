@@ -4,10 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	driver "github.com/arangodb/go-driver"
 	"github.com/google/uuid"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
+
+const friendEdgeExistQuery string = `FOR v,e,p IN 1..1 ANY
+	@fromUser friends
+	OPTIONS { uniqueVertices: "path" }
+	FILTER e._to == @toUser
+	return e._key`
 
 type friendCtrler struct {
 	argClient *argdb.Client
@@ -38,4 +45,25 @@ func (frn *friendCtrler) MkFriendDocId(key string) string {
 func (frn *friendCtrler) RemoveFriendEdge(ctx context.Context, key string) error {
 	_, err := frn.argClient.Coll.RemoveDocument(ctx, key)
 	return err
+}
+
+func (frn *friendCtrler) IsFriendEdgeExist(ctx context.Context, user1, user2 string) (bool, error) {
+	cursor, err := frn.argClient.Db.Query(ctx, friendEdgeExistQuery, map[string]interface{}{
+		"fromUser": user1, "toUser": user2,
+	})
+	if err != nil {
+		return false, err
+	}
+	defer cursor.Close()
+
+	for {
+		var key string
+		_, err := cursor.ReadDocument(ctx, &key)
+		if driver.IsNoMoreDocuments(err) {
+			return false, nil
+		} else if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
 }
