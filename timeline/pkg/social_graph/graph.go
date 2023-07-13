@@ -9,9 +9,9 @@ import (
 )
 
 // TODO
-// 1. Change collection names, field names and other parameter names (eg: userRelations, mediaOwnerEdges)
+// 1. Change collection names, field names and other parameter names (eg: friends, mediaOwnerEdges)
 
-const recentMediaQuery string = `FOR v,e,p IN 1..2 INBOUND @userNode userRelations, mediaOwnerEdges
+const recentMediaQuery string = `FOR v,e,p IN 1..2 INBOUND @userNode friends, mediaOwnerEdges
 	FILTER e.kind == "media_owner" && v.visibility == @visibility
 	&& v.created_date <= DATE_ISO8601(@lastPostAt)
 	SORT v.created_date DESC
@@ -20,7 +20,7 @@ const recentMediaQuery string = `FOR v,e,p IN 1..2 INBOUND @userNode userRelatio
 	"description" : v.description,"created_date" : v.created_date, "size" : v.size }`
 
 const suggestFriendsQuery string = `FOR v,e,p IN 2..2 OUTBOUND
-	@userNode userRelations
+	@userNode friends
 	OPTIONS { uniqueVertices: "path" }
 	FILTER e.kind == "friend" 
 	&& e.started_at > DATE_ISO8601(@startedThreshold)

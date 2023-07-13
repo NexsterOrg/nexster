@@ -2,7 +2,7 @@ package friendrequest
 
 import "context"
 
-const friendReqColl string = "friendRequest"
+const FriendReqColl string = "friendRequest"
 
 const (
 	kind    string = "friend_request"

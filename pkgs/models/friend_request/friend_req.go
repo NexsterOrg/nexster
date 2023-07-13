@@ -14,10 +14,14 @@ type friendReqCtrler struct {
 	argClient *argdb.Client
 }
 
+var _ Interface = (*friendReqCtrler)(nil)
+
 func NewCtrler(argClient *argdb.Client) *friendReqCtrler {
 	return &friendReqCtrler{argClient: argClient}
 }
 
+// TODO:
+// ReqDate time need to be changed once we figure out a solution for ttime differencing issue.
 func (fr *friendReqCtrler) CreateFriendReqEdge(ctx context.Context, doc *FriendRequest) error {
 	var err error
 	doc.Key = uuid.New().String() // Generate UUID key
@@ -30,7 +34,7 @@ func (fr *friendReqCtrler) CreateFriendReqEdge(ctx context.Context, doc *FriendR
 }
 
 func (fr *friendReqCtrler) MkFriendReqDocId(key string) string {
-	return fmt.Sprintf("%s/%s", friendReqColl, key)
+	return fmt.Sprintf("%s/%s", FriendReqColl, key)
 }
 
 // Update the fields in friend request edge. Return an error if edge is not existing
