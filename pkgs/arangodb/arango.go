@@ -3,7 +3,6 @@ package arangodb
 import (
 	"context"
 	"fmt"
-	"log"
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
@@ -14,21 +13,20 @@ type Config struct {
 	Port                                   int
 }
 
+// TODO:
+// Need two seperate clients for Db and collection
 type Client struct {
-	db driver.Database
+	Db   driver.Database
+	Coll driver.CollectionDocuments
 }
 
-var _ Interface = (*Client)(nil)
-
-// create new client with arango db
-func NewDbClient(ctx context.Context, cfg *Config) *Client {
+func newClient(cfg *Config) driver.Client {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{fmt.Sprintf("http://%s:%d", cfg.Hostname, cfg.Port)},
 	})
 	if err != nil {
 		panic(err)
 	}
-
 	client, err := driver.NewClient(driver.ClientConfig{
 		Connection:     conn,
 		Authentication: driver.BasicAuthentication(cfg.Username, cfg.Password),
@@ -36,31 +34,29 @@ func NewDbClient(ctx context.Context, cfg *Config) *Client {
 	if err != nil {
 		panic(err)
 	}
+	return client
+}
 
+// Create new client to work with db
+func NewDbClient(ctx context.Context, cfg *Config) *Client {
+	client := newClient(cfg)
 	db, err := client.Database(ctx, cfg.Database)
 	if err != nil {
 		panic(err)
 	}
-	return &Client{db: db}
+	return &Client{Db: db}
 }
 
-func (cl *Client) ListMedia(ctx context.Context, query string, bindVars map[string]interface{}) ([]*Media, error) {
-	var posts []*Media
-	cursor, err := cl.db.Query(ctx, query, bindVars)
+// Create new client to work with specific collection
+func NewCollClient(ctx context.Context, cfg *Config, collection string) *Client {
+	client := newClient(cfg)
+	db, err := client.Database(ctx, cfg.Database)
 	if err != nil {
-		return posts, err
+		panic(err)
 	}
-	defer cursor.Close()
-
-	for {
-		var post Media
-		_, err := cursor.ReadDocument(ctx, &post)
-		if driver.IsNoMoreDocuments(err) {
-			return posts, nil
-		} else if err != nil {
-			log.Println(err)
-			continue
-		}
-		posts = append(posts, &post)
+	coll, err := db.Collection(ctx, collection)
+	if err != nil {
+		panic(err)
 	}
+	return &Client{Db: db, Coll: coll}
 }
