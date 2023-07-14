@@ -3,6 +3,7 @@ package reaction
 import (
 	"context"
 	"fmt"
+	"log"
 
 	driver "github.com/arangodb/go-driver"
 
@@ -53,6 +54,43 @@ func (rerp *reactionRepo) UpdateReactions(ctx context.Context, fromUserId, toMed
 		return fmt.Errorf("failed to update doc %v", err)
 	}
 	return nil
+}
+
+func (rerp *reactionRepo) GetReactionsCount(ctx context.Context, query string, bindVars map[string]interface{}) (map[string]int, error) {
+	results := map[string]int{}
+	cursor, err := rerp.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+	var likeCount, loveCount, laughCount, sadCount, insightfulCount int
+	for {
+		var reaction Reaction
+		_, err := cursor.ReadDocument(ctx, &reaction)
+		if driver.IsNoMoreDocuments(err) {
+			return map[string]int{
+				like: likeCount, love: loveCount, laugh: laughCount,
+				sad: sadCount, insightful: insightfulCount}, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		if reaction.Like {
+			likeCount++
+		}
+		if reaction.Love {
+			loveCount++
+		}
+		if reaction.Laugh {
+			laughCount++
+		}
+		if reaction.Sad {
+			sadCount++
+		}
+		if reaction.Insightful {
+			insightfulCount++
+		}
+	}
 }
 
 func convertBody(doc map[string]interface{}) (map[string]bool, error) {

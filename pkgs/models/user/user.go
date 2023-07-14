@@ -85,3 +85,9 @@ func (uc *userCtrler) CountUsers(ctx context.Context, query string, bindVars map
 		return count, nil
 	}
 }
+
+func (uc *userCtrler) GetUser(ctx context.Context, key string) (*User, error) {
+	user := &User{}
+	_, err := uc.argClient.Coll.ReadDocument(ctx, key, user)
+	return user, err
+}

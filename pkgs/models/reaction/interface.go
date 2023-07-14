@@ -4,6 +4,7 @@ import "context"
 
 type Interface interface {
 	UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) error
+	GetReactionsCount(ctx context.Context, query string, bindVars map[string]interface{}) (map[string]int, error)
 }
 
 type Reaction struct {
