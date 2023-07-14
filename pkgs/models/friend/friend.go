@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	driver "github.com/arangodb/go-driver"
-	"github.com/google/uuid"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
@@ -28,14 +27,13 @@ func NewCtrler(argClient *argdb.Client) *friendCtrler {
 
 // TODO:
 // ReqDate time need to be changed once we figure out a solution for ttime differencing issue.
-func (frn *friendCtrler) CreateFriendEdge(ctx context.Context, doc *Friend) (string, error) {
-	doc.Key = uuid.New().String() // Generate UUID key
+func (frn *friendCtrler) CreateFriendEdge(ctx context.Context, doc *Friend) error {
 	doc.Kind = kind
 	_, err := frn.argClient.Coll.CreateDocument(ctx, doc)
 	if err != nil {
-		return "", fmt.Errorf("failed to create friend edge document for fromKey: %s, toKey: %s id due to %v", doc.From, doc.To, err)
+		return fmt.Errorf("failed to create friend edge document for fromKey: %s, toKey: %s id due to %v", doc.From, doc.To, err)
 	}
-	return doc.Key, nil
+	return nil
 }
 
 func (frn *friendCtrler) MkFriendDocId(key string) string {
