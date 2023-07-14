@@ -36,24 +36,14 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
 
 /*
  * Retrieve list of most recent posts before the given time threshold.
- * Query Parameters : userid, type, last_post_at, max_post_count
+ * Query Parameters : last_post_at, max_post_count
  */
-func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var userId, visibility, lastPostAt, postCountStr string
+func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var userId, lastPostAt, postCountStr string
 	ctx := context.Background()
 	emptyArr, _ := json.Marshal([]int{})
-	if userId = r.URL.Query().Get("userid"); userId == "" {
-		s.logger.Errorf("failed list recent post since userid query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
-		w.Write(emptyArr)
-		return
-	}
-	if visibility = r.URL.Query().Get("type"); visibility == "" {
-		s.logger.Errorf("failed list recent post since type query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
-		w.Write(emptyArr)
-		return
-	}
+	userId = p.ByName("userid")
+
 	if lastPostAt = r.URL.Query().Get("last_post_at"); lastPostAt == "" {
 		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z")
 	}
@@ -62,7 +52,7 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		postCount = defaultPostCount
 	}
-
+	visibility := "public"
 	content, err := s.scGraph.ListRecentPosts(ctx, userId, lastPostAt, visibility, postCount)
 	if err != nil {
 		s.logger.Errorf("failed list recent posts due to %w", err)

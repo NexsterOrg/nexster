@@ -29,17 +29,18 @@ func main() {
 	logger.EnableColor()
 
 	router := httprouter.New()
-	argdbClient := argdb.NewDbClient(ctx, argdbCfg)
-	argCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
+	argRactCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
+	argMedCollClient := argdb.NewCollClient(ctx, argdbCfg, mrepo.MediaColl)
+	argUsrCollClient := argdb.NewCollClient(ctx, argdbCfg, urepo.UsersColl)
 
-	mediaRepo := mrepo.NewRepo(argdbClient)
-	userRepo := urepo.NewCtrler(argdbClient)
-	reactRepo := rrepo.NewRepo(argCollClient)
+	mediaRepo := mrepo.NewRepo(argMedCollClient)
+	userRepo := urepo.NewCtrler(argUsrCollClient)
+	reactRepo := rrepo.NewRepo(argRactCollClient)
 
 	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/timeline/recent_posts", srv.ListRecentPostsForTimeline)
+	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline)
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 
 	router.PUT("/timeline/reactions", srv.UpdateMediaReactions)
