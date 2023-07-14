@@ -40,7 +40,8 @@ func main() {
 	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline)
+	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
+	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 
 	router.PUT("/timeline/reactions", srv.UpdateMediaReactions)

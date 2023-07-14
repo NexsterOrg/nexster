@@ -12,7 +12,7 @@ import (
 // TODO
 // 1. Change collection names, field names and other parameter names (eg: friends, mediaOwnerEdges)
 
-const recentMediaQuery string = `FOR v,e,p IN 1..2 INBOUND @userNode friends, mediaOwnerEdges
+const recentMediaQuery string = `FOR v,e IN 1..2 INBOUND @userNode friends, mediaOwnerEdges
 	FILTER e.kind == "media_owner" && v.visibility == @visibility
 	&& v.created_date <= DATE_ISO8601(@lastPostAt)
 	SORT v.created_date DESC
@@ -20,7 +20,7 @@ const recentMediaQuery string = `FOR v,e,p IN 1..2 INBOUND @userNode friends, me
 	RETURN DISTINCT {"media": {"_key": v._key, "link" : v.link, "title" : v.title, 
 	"description" : v.description,"created_date" : v.created_date, "size" : v.size}, "owner_id": e._to}`
 
-const suggestFriendsQuery string = `FOR v,e,p IN 2..2 OUTBOUND
+const suggestFriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	@userNode friends
 	OPTIONS { uniqueVertices: "path" }
 	FILTER e.kind == "friend" 
@@ -30,8 +30,15 @@ const suggestFriendsQuery string = `FOR v,e,p IN 2..2 OUTBOUND
 	RETURN { "user_id" : v.user_id, "username" : v.username, "image_url": v.image_url }`
 
 const getReactionQuery string = `FOR v,e IN 1..1 INBOUND @mediaNode reactions
-RETURN { "like": e["like"], "love": e.love, "laugh": e.laugh,
+    RETURN { "like": e["like"], "love": e.love, "laugh": e.laugh,
     "sad": e.sad, "insightful": e.insightful }`
+
+const getOwnersMediaQuery string = `FOR v,e IN 1..1 INBOUND @userNode mediaOwnerEdges
+	FILTER v.created_date <= DATE_ISO8601(@lastPostAt)
+	SORT v.created_date DESC
+	LIMIT @noOfPosts
+	RETURN DISTINCT {"_key": v._key, "link" : v.link, "title" : v.title, 
+	"description" : v.description,"created_date" : v.created_date, "size" : v.size}`
 
 type socialGraph struct {
 	mediaRepo mrepo.Interface
@@ -80,6 +87,35 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 
 		posts = append(posts, &map[string]interface{}{
 			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": user.ImageUrl},
+			"reactions": racts,
+		})
+	}
+
+	return posts, nil
+}
+
+func (sgr *socialGraph) ListOwnersPosts(ctx context.Context, userKey, lastPostTimestamp string, noOfPosts int) ([]*map[string]interface{}, error) {
+	posts := []*map[string]interface{}{}
+	bindVars := map[string]interface{}{
+		"userNode":   sgr.userRepo.MkUserDocId(userKey),
+		"lastPostAt": lastPostTimestamp,
+		"noOfPosts":  noOfPosts,
+	}
+	medias, err := sgr.mediaRepo.ListMedia(ctx, getOwnersMediaQuery, bindVars)
+	if err != nil {
+		return posts, err
+	}
+
+	for _, media := range medias {
+		racts, err2 := sgr.reactRepo.GetReactionsCount(ctx, getReactionQuery, map[string]interface{}{
+			"mediaNode": sgr.mediaRepo.MkMediaDocId(media.Key),
+		})
+		if err2 != nil {
+			log.Println(err2)
+			continue
+		}
+		posts = append(posts, &map[string]interface{}{
+			"media":     media,
 			"reactions": racts,
 		})
 	}

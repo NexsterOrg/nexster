@@ -75,6 +75,43 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	w.Write(body)
 }
 
+// List posts for private timeline
+func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var userId, lastPostAt, postCountStr string
+	ctx := context.Background()
+	emptyArr, _ := json.Marshal([]int{})
+	userId = p.ByName("userid")
+
+	if lastPostAt = r.URL.Query().Get("last_post_at"); lastPostAt == "" {
+		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z")
+	}
+	postCountStr = r.URL.Query().Get("max_post_count")
+	postCount, err := strconv.Atoi(postCountStr)
+	if err != nil {
+		postCount = defaultPostCount
+	}
+	content, err := s.scGraph.ListOwnersPosts(ctx, userId, lastPostAt, postCount)
+	if err != nil {
+		s.logger.Errorf("failed list owners posts due to %w", err)
+		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+	s.setResponseHeaders(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	})
+	if content == nil {
+		w.Write(emptyArr)
+		return
+	}
+	body, err := json.Marshal(content)
+	if err != nil {
+		s.logger.Errorf("failed convert the list of owners posts into json for due to %w", err)
+	}
+	w.Write(body)
+}
+
 func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userId, startedAt, noOfSugStr string
 	ctx := context.Background()
