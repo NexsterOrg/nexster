@@ -33,7 +33,7 @@ func main() {
 	argCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
 
 	mediaRepo := mrepo.NewRepo(argdbClient)
-	userRepo := urepo.NewRepo(argdbClient)
+	userRepo := urepo.NewCtrler(argdbClient)
 	reactRepo := rrepo.NewRepo(argCollClient)
 
 	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)

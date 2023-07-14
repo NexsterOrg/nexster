@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 )
 
 const userColl string = "users" // Need to be changed once `users` repo bring to common level
@@ -16,17 +19,39 @@ const gettFriendReqEdgeQuery string = `FOR v,e IN 1..1 ANY
 	FILTER e.kind == "friend_request" && v._id == @friendNode
 	return e._key`
 
+const listFriends string = `FOR v,e IN 1..1 OUTBOUND
+	@startNode friends
+	OPTIONS { uniqueVertices: "path" }
+	SORT e.started_at DESC
+	LIMIT @offset, @count
+	RETURN {
+		"user_id": v._key,
+		"name": v.username,
+		"from_friend_id": e._key,
+		"to_friend_id": e.other_friend_id,
+		"image_url" : v.image_url,
+		"started_at" : e.started_at,
+		"headling" : v.headling
+	}`
+
+const totalFriends string = `RETURN LENGTH(
+	FOR v IN 1..1 OUTBOUND @startNode friends
+	  OPTIONS { uniqueVertices: "path" }
+	  RETURN 1)`
+
 type socialGraph struct {
 	fReqCtrler freq.Interface
 	frndCtrler frnd.Interface
+	usrCtrler  usr.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface) *socialGraph {
+func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface) *socialGraph {
 	return &socialGraph{
 		fReqCtrler: frIntfce,
 		frndCtrler: frndIntfce,
+		usrCtrler:  usrIntfce,
 	}
 }
 
@@ -82,30 +107,37 @@ func (sgr *socialGraph) CreateFriend(ctx context.Context, friendReqKey, user1, u
 	if err := sgr.fReqCtrler.RemoveFriendReqEdge(ctx, friendReqKey); err != nil {
 		return results, fmt.Errorf("error: failed to remove friend request due to %v", err)
 	}
-	friendId1, err := sgr.frndCtrler.CreateFriendEdge(ctx, &frnd.Friend{
-		From:      fmt.Sprintf("%s/%s", userColl, user1),
-		To:        fmt.Sprintf("%s/%s", userColl, user2),
-		StartedAt: acceptedAt,
+	id1 := uuid.New().String() // Generate UUID key
+	id2 := uuid.New().String()
+
+	err := sgr.frndCtrler.CreateFriendEdge(ctx, &frnd.Friend{
+		Key:           id1,
+		From:          fmt.Sprintf("%s/%s", userColl, user1),
+		To:            fmt.Sprintf("%s/%s", userColl, user2),
+		OtherFriendId: id2,
+		StartedAt:     acceptedAt,
 	})
 	if err != nil {
 		return results, fmt.Errorf("failed to create friend, fromUser: %s, toUser: %s due to %v", user1, user2, err)
 	}
 
-	friendId2, err := sgr.frndCtrler.CreateFriendEdge(ctx, &frnd.Friend{
-		From:      fmt.Sprintf("%s/%s", userColl, user2),
-		To:        fmt.Sprintf("%s/%s", userColl, user1),
-		StartedAt: acceptedAt,
+	err = sgr.frndCtrler.CreateFriendEdge(ctx, &frnd.Friend{
+		Key:           id2,
+		From:          fmt.Sprintf("%s/%s", userColl, user2),
+		To:            fmt.Sprintf("%s/%s", userColl, user1),
+		OtherFriendId: id1,
+		StartedAt:     acceptedAt,
 	})
 	if err != nil {
 		// remove previously created friendId1
-		if err2 := sgr.frndCtrler.RemoveFriendEdge(ctx, friendId1); err2 != nil {
+		if err2 := sgr.frndCtrler.RemoveFriendEdge(ctx, id1); err2 != nil {
 			return results, fmt.Errorf(`failed to delete friend, fromUser: %s, toUser: %s due to %v. 
 				Uni directionaly edge will be remained`, user1, user2, err2)
 		}
 		return results, fmt.Errorf("failed to create friend, fromUser: %s, toUser: %s due to %v", user2, user1, err)
 	}
-	results["friend_id1"] = friendId1
-	results["friend_id2"] = friendId2
+	results["friend_id1"] = id1
+	results["friend_id2"] = id2
 	results["started_at"] = acceptedAt
 
 	return results, nil
@@ -116,4 +148,18 @@ func (sgr *socialGraph) RemoveFriend(ctx context.Context, key1, key2 string) err
 		return err
 	}
 	return sgr.frndCtrler.RemoveFriendEdge(ctx, key2)
+}
+
+func (sgr *socialGraph) ListFriends(ctx context.Context, userId string, offset, count int) ([]*map[string]string, error) {
+	return sgr.usrCtrler.ListUsersV2(ctx, listFriends, map[string]interface{}{
+		"startNode": sgr.usrCtrler.MkUserDocId(userId),
+		"offset":    offset,
+		"count":     count,
+	})
+}
+
+func (sgr *socialGraph) CountFriends(ctx context.Context, userId string) (int, error) {
+	return sgr.usrCtrler.CountUsers(ctx, totalFriends, map[string]interface{}{
+		"startNode": sgr.usrCtrler.MkUserDocId(userId),
+	})
 }

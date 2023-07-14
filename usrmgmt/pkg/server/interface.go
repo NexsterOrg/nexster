@@ -20,6 +20,7 @@ type Interface interface {
 	RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type FriendRequest struct {

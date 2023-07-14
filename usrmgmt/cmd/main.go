@@ -11,6 +11,7 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	usrv "github.com/NamalSanjaya/nexster/usrmgmt/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
@@ -29,13 +30,18 @@ func main() {
 
 	argFrndReqClient := argdb.NewCollClient(ctx, argdbCfg, freq.FriendReqColl)
 	argFrndClient := argdb.NewCollClient(ctx, argdbCfg, frnd.FriendColl)
+	argUsrClient := argdb.NewCollClient(ctx, argdbCfg, usr.UsersColl)
+
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
+	usrCtrler := usr.NewCtrler(argUsrClient)
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler)
 	srv := usrv.New(grCtrler, logger)
 
 	router := httprouter.New()
+
+	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
 
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	vdtor "github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
@@ -14,8 +15,10 @@ import (
 )
 
 const (
-	failed  string = "failed"
-	success string = "success"
+	failed          string = "failed"
+	success         string = "success"
+	defaultPageNo   int    = 1
+	defaultPageSize int    = 20
 )
 
 type server struct {
@@ -188,6 +191,54 @@ func (s *server) RemoveFriendship(w http.ResponseWriter, r *http.Request, p http
 	}, map[string]interface{}{
 		"state": success,
 	})
+}
+
+func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userId := p.ByName("user_id")
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		// s.logger.Warnf("page number not present in URL, therefore default page no = %d will be used", defaultPageNo)
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		// s.logger.Warnf("page size not present in URL, therefore default page size = %d will be used", defaultPageSize)
+		pageSize = defaultPageSize
+	}
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"page":          pageNo,
+		"page_size":     pageSize,
+		"results_count": 0,
+		"total_count":   0,
+		"data":          map[string]string{},
+	}
+	results, err := s.scGraph.ListFriends(context.Background(), userId, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list friends info due to %v", err)
+		respBody["message"] = "server failed to list friends info"
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	totalCount, err := s.scGraph.CountFriends(context.Background(), userId)
+	if err != nil {
+		s.logger.Errorf("failed to count the friends. Err: %v", err)
+		respBody["message"] = "server failed to list friends info"
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	resultsCount := len(results)
+	respBody["state"] = success
+	respBody["data"] = results
+	respBody["results_count"] = resultsCount
+	respBody["total_count"] = totalCount
+
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {

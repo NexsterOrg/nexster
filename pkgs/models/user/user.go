@@ -10,19 +10,19 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
 
-type userRepo struct {
+type userCtrler struct {
 	argClient *argdb.Client
 }
 
-var _ Interface = (*userRepo)(nil)
+var _ Interface = (*userCtrler)(nil)
 
-func NewRepo(argClient *argdb.Client) *userRepo {
-	return &userRepo{argClient: argClient}
+func NewCtrler(argClient *argdb.Client) *userCtrler {
+	return &userCtrler{argClient: argClient}
 }
 
-func (ur *userRepo) ListUsers(ctx context.Context, query string, bindVars map[string]interface{}) ([]*User, error) {
+func (uc *userCtrler) ListUsers(ctx context.Context, query string, bindVars map[string]interface{}) ([]*User, error) {
 	var users []*User
-	cursor, err := ur.argClient.Db.Query(ctx, query, bindVars)
+	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
 	if err != nil {
 		return users, err
 	}
@@ -41,6 +41,47 @@ func (ur *userRepo) ListUsers(ctx context.Context, query string, bindVars map[st
 	}
 }
 
-func (ur *userRepo) MkUserDocId(key string) string {
+func (uc *userCtrler) MkUserDocId(key string) string {
 	return fmt.Sprintf("%s/%s", UsersColl, key)
+}
+
+func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
+	results := []*map[string]string{}
+	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result map[string]string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
+}
+
+func (uc *userCtrler) CountUsers(ctx context.Context, query string, bindVars map[string]interface{}) (int, error) {
+	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close()
+
+	for {
+		var count int
+		_, err := cursor.ReadDocument(ctx, &count)
+		if driver.IsNoMoreDocuments(err) {
+			return 0, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		return count, nil
+	}
 }
