@@ -27,7 +27,7 @@ const suggestFriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	&& e.started_at > DATE_ISO8601(@startedThreshold)
 	SORT e.started_at
 	LIMIT @noOfSuggestions
-	RETURN { "user_id" : v.user_id, "username" : v.username, "image_url": v.image_url }`
+	RETURN { "_key" : v._key, "username" : v.username, "image_url": v.image_url }`
 
 const getReactionQuery string = `FOR v,e IN 1..1 INBOUND @mediaNode reactions
     RETURN { "like": e["like"], "love": e.love, "laugh": e.laugh,

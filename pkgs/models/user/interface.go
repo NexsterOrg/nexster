@@ -14,6 +14,9 @@ type Interface interface {
 	GetUser(ctx context.Context, key string) (*User, error)
 }
 
+// TODO:
+// User field has all user information. But some APIs don't need to
+// fetch all user data. improve this
 type User struct {
 	UserId   string `json:"_key"`
 	Username string `json:"username"`
