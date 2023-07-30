@@ -10,6 +10,9 @@ import (
 const ContentType string = "Content-Type"
 const ContentLength string = "Content-Length"
 const AllowOrigin string = "Access-Control-Allow-Origin"
+const AllowMethods string = "Access-Control-Allow-Methods"
+
+const AllMethods string = "GET, POST, PUT, DELETE, OPTIONS"
 
 const Date string = "Date"
 

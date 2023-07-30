@@ -41,6 +41,11 @@ const getOwnersMediaQuery string = `FOR v,e IN 1..1 INBOUND @userNode mediaOwner
 	RETURN DISTINCT {"_key": v._key, "link" : v.link, "title" : v.title, 
 	"description" : v.description,"created_date" : v.created_date, "size" : v.size}`
 
+const getViewerReactions string = `FOR r IN reactions
+	FILTER r._from == @fromUser AND r._to == @toMedia
+	LIMIT 1
+	RETURN r`
+
 type socialGraph struct {
 	mediaRepo mrepo.Interface
 	userRepo  urepo.Interface
@@ -86,9 +91,18 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 			continue
 		}
 
+		viewersReacts, err2 := sgr.reactRepo.GetViewersReactions(ctx, getViewerReactions, map[string]interface{}{
+			"fromUser": sgr.userRepo.MkUserDocId(userId), "toMedia": sgr.mediaRepo.MkMediaDocId(media.Media.Key),
+		})
+		if err2 != nil {
+			log.Println(err2)
+			continue
+		}
+
 		posts = append(posts, &map[string]interface{}{
 			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": user.ImageUrl},
-			"reactions": racts,
+			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
+				"laugh": viewersReacts.Laugh},
 		})
 	}
 

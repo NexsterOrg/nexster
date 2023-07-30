@@ -108,6 +108,34 @@ func (rerp *reactionRepo) GetReactionsCount(ctx context.Context, query string, b
 	}
 }
 
+// If no link is found, then return empty Reaction Struct. (Key is empty string)
+func (rerp *reactionRepo) GetViewersReactions(ctx context.Context, query string, bindVars map[string]interface{}) (Reaction, error) {
+	cursor, err := rerp.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return Reaction{}, err
+	}
+	var reacts []Reaction
+	cnt := 0
+	for {
+		var react Reaction
+		_, err := cursor.ReadDocument(ctx, &react)
+		if driver.IsNoMoreDocuments(err) {
+			if cnt == 1 {
+				return reacts[0], nil
+			}
+			if cnt == 0 {
+				return Reaction{}, nil
+			}
+			return Reaction{}, fmt.Errorf("more than one reaction edges exist")
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		reacts = append(reacts, react)
+		cnt++
+	}
+}
+
 func convertBody(doc map[string]interface{}) (map[string]bool, error) {
 	newDoc := map[string]bool{}
 	for key, val := range doc {

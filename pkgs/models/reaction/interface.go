@@ -6,6 +6,7 @@ type Interface interface {
 	UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) (string, error)
 	GetReactionsCount(ctx context.Context, query string, bindVars map[string]interface{}) (map[string]int, error)
 	CreateReactionLink(ctx context.Context, fromUserId, toMediaId string, updateDoc map[string]interface{}) (string, error)
+	GetViewersReactions(ctx context.Context, query string, bindVars map[string]interface{}) (Reaction, error)
 }
 
 type Reaction struct {

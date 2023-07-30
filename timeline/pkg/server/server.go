@@ -37,6 +37,7 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
 }
 
 /*
+ * TODO: Need to include logged user's relation with reactions
  * Retrieve list of most recent posts before the given time threshold.
  * Query Parameters : last_post_at, max_post_count
  */
@@ -65,8 +66,8 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	s.setResponseHeaders(w, http.StatusOK, map[string]string{
 		ContentType: ApplicationJson_Utf8,
 		Date:        "",
-		AllowOrigin: "*",
 	})
+
 	if content == nil {
 		w.Write(emptyArr)
 		return
@@ -237,6 +238,7 @@ func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 	ctx := context.Background()
+	// TODO: if the resource is not newly created, status code should be 200.
 	createdKey, err := s.scGraph.CreateMediaReaction(ctx, fromUserKey, toMediaKey, data)
 	if err != nil {
 		s.logger.Errorf("Failed to create reaction with id %s for media id %s due %v.", fromUserKey, toMediaKey, err)
