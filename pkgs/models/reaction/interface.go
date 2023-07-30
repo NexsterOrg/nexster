@@ -3,8 +3,9 @@ package reaction
 import "context"
 
 type Interface interface {
-	UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) error
+	UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) (string, error)
 	GetReactionsCount(ctx context.Context, query string, bindVars map[string]interface{}) (map[string]int, error)
+	CreateReactionLink(ctx context.Context, fromUserId, toMediaId string, updateDoc map[string]interface{}) (string, error)
 }
 
 type Reaction struct {

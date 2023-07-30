@@ -12,9 +12,10 @@ import (
 // TODO
 // 1. Change collection names, field names and other parameter names (eg: friends, mediaOwnerEdges)
 
+// TODO: For users/482201 case return wrong results.
 const recentMediaQuery string = `FOR v,e IN 1..2 INBOUND @userNode friends, mediaOwnerEdges
 	FILTER e.kind == "media_owner" && v.visibility == @visibility
-	&& v.created_date <= DATE_ISO8601(@lastPostAt)
+	&& v.created_date < DATE_ISO8601(@lastPostAt)
 	SORT v.created_date DESC
 	LIMIT @noOfPosts
 	RETURN DISTINCT {"media": {"_key": v._key, "link" : v.link, "title" : v.title, 
@@ -132,6 +133,10 @@ func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, start
 	return sgr.userRepo.ListUsers(ctx, suggestFriendsQuery, bindVars)
 }
 
-func (sgr *socialGraph) UpdateMediaReaction(ctx context.Context, fromUserKey, toMediaKey, key string, newDoc map[string]interface{}) error {
+func (sgr *socialGraph) UpdateMediaReaction(ctx context.Context, fromUserKey, toMediaKey, key string, newDoc map[string]interface{}) (string, error) {
 	return sgr.reactRepo.UpdateReactions(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), key, newDoc)
+}
+
+func (sgr *socialGraph) CreateMediaReaction(ctx context.Context, fromUserKey, toMediaKey string, newDoc map[string]interface{}) (string, error) {
+	return sgr.reactRepo.CreateReactionLink(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), newDoc)
 }

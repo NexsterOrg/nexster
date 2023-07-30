@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	failed            string = "failed"
+	success           string = "success"
 	defaultPostCount  int    = 10
 	defaultFriendSugs int    = 10
 	defaultDate       string = "2023-01-01T01:00:00.000Z"
@@ -63,6 +65,7 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	s.setResponseHeaders(w, http.StatusOK, map[string]string{
 		ContentType: ApplicationJson_Utf8,
 		Date:        "",
+		AllowOrigin: "*",
 	})
 	if content == nil {
 		w.Write(emptyArr)
@@ -154,40 +157,95 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 	w.Write(body)
 }
 
-func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var fromUserKey, toMediaKey, reactionKey string
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{"key": ""},
+	}
+
+	reactionKey = p.ByName("reaction_id")
+
 	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
 		s.logger.Errorf("failed update media reaction since reactor_id query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 
 	if toMediaKey = r.URL.Query().Get("media_id"); toMediaKey == "" {
 		s.logger.Errorf("failed update media reaction since media_id query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		return
+	}
+	// Need to check this place
+	// if reactionKey = r.URL.Query().Get("reaction_id"); reactionKey == "" {
+	// 	s.logger.Errorf("failed update media reaction since reaction_id query parameter is empty")
+	// 	s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+	// 	return
+	// }
+
+	data, err := s.readReactionJson(r)
+	if err != nil {
+		s.logger.Errorf("Unable to read the request body since request body in wrong format")
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		return
+	}
+	ctx := context.Background()
+	updatedKey, err := s.scGraph.UpdateMediaReaction(ctx, fromUserKey, toMediaKey, reactionKey, data)
+	if err != nil {
+		s.logger.Errorf("Failed to Update reaction with id %s for media id %s due %v.", fromUserKey, toMediaKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]string{"key": updatedKey}
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+// return http code should be 201.
+func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var fromUserKey, toMediaKey string
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{"key": ""},
+	}
+
+	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
+		s.logger.Errorf("failed to create media reaction since reactor_id query parameter is empty")
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 
-	if reactionKey = r.URL.Query().Get("reaction_id"); reactionKey == "" {
-		s.logger.Errorf("failed update media reaction since reaction_id query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+	if toMediaKey = r.URL.Query().Get("media_id"); toMediaKey == "" {
+		s.logger.Errorf("failed to create media reaction since media_id query parameter is empty")
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 
 	data, err := s.readReactionJson(r)
 	if err != nil {
-		s.logger.Errorf("Unable to read the request body since request body in wrong format")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		s.logger.Errorf("unable to read the request body since request body in wrong format")
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 	ctx := context.Background()
-	err = s.scGraph.UpdateMediaReaction(ctx, fromUserKey, toMediaKey, reactionKey, data)
+	createdKey, err := s.scGraph.CreateMediaReaction(ctx, fromUserKey, toMediaKey, data)
 	if err != nil {
-		s.logger.Errorf("Failed to Update reaction with id %s for media id %s due %v\n", fromUserKey, toMediaKey, err)
-		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
+		s.logger.Errorf("Failed to create reaction with id %s for media id %s due %v.", fromUserKey, toMediaKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
 		return
 	}
-	s.setResponseHeaders(w, http.StatusOK, map[string]string{Date: ""})
+	respBody["state"] = success
+	respBody["data"] = map[string]string{"key": createdKey}
+	s.sendRespMsg(w, http.StatusCreated, headers, respBody)
 }
 
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
@@ -208,4 +266,13 @@ func (s *server) readReactionJson(r *http.Request) (map[string]interface{}, erro
 		return data, err
 	}
 	return data, nil
+}
+
+func (s *server) sendRespMsg(w http.ResponseWriter, statusCode int, headers map[string]string, body map[string]interface{}) {
+	for key, val := range headers {
+		w.Header().Add(key, val)
+	}
+	w.WriteHeader(statusCode)
+	resp, _ := json.Marshal(body)
+	w.Write(resp)
 }
