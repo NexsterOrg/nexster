@@ -7,6 +7,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
+	"github.com/rs/cors"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
@@ -48,6 +49,16 @@ func main() {
 
 	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
 
+	c := cors.New(cors.Options{
+		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
+		AllowCredentials:   true,
+		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		OptionsPassthrough: true,
+		// Enable Debugging for testing, consider disabling in production
+		Debug: false,
+	})
+
+	handler := c.Handler(router)
 	log.Println("Listen....8000")
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe(":8000", handler))
 }
