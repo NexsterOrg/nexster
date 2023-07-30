@@ -44,7 +44,9 @@ func main() {
 	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 
-	router.PUT("/timeline/reactions", srv.UpdateMediaReactions)
+	router.PUT("/timeline/reactions/:reaction_id", srv.UpdateMediaReactions)
+
+	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
 
 	log.Println("Listen....8000")
 	log.Fatal(http.ListenAndServe(":8000", router))
