@@ -2,6 +2,7 @@ package social_graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
@@ -152,5 +153,16 @@ func (sgr *socialGraph) UpdateMediaReaction(ctx context.Context, fromUserKey, to
 }
 
 func (sgr *socialGraph) CreateMediaReaction(ctx context.Context, fromUserKey, toMediaKey string, newDoc map[string]interface{}) (string, error) {
+	// first check whether a there is a link or not
+	viewersReacts, err := sgr.reactRepo.GetViewersReactions(ctx, getViewerReactions, map[string]interface{}{
+		"fromUser": sgr.userRepo.MkUserDocId(fromUserKey), "toMedia": sgr.mediaRepo.MkMediaDocId(toMediaKey),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create reaction link due to %v", err)
+	}
+	// Already there is a key
+	if viewersReacts.Key != "" {
+		return sgr.reactRepo.UpdateReactions(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), viewersReacts.Key, newDoc)
+	}
 	return sgr.reactRepo.CreateReactionLink(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), newDoc)
 }
