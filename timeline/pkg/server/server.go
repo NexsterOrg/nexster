@@ -119,16 +119,29 @@ func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Reque
 func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userId, startedAt, noOfSugStr string
 	ctx := context.Background()
-	emptyArr, _ := json.Marshal([]int{})
+
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"started_at":    "",
+		"newest_at":     "",
+		"results_count": 0,
+		"data":          []map[string]string{},
+	}
+
 	if userId = r.URL.Query().Get("userid"); userId == "" {
 		s.logger.Errorf("failed list friend suggestions since userid query parameter is empty")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
-		w.Write(emptyArr)
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 	if startedAt = r.URL.Query().Get("started_at"); startedAt == "" {
 		startedAt = defaultDate
 	}
+	respBody["started_at"] = startedAt
 	noOfSugStr = r.URL.Query().Get("max_sugs")
 	noOfSugs, err := strconv.Atoi(noOfSugStr)
 	if err != nil {
@@ -138,24 +151,19 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 	content, err := s.scGraph.ListFriendSuggestions(ctx, userId, startedAt, noOfSugs)
 	if err != nil {
 		s.logger.Errorf("failed list friend suggestions due to %w", err)
-		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
-		w.Write(emptyArr)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
 		return
 	}
 
-	s.setResponseHeaders(w, http.StatusOK, map[string]string{
-		ContentType: ApplicationJson_Utf8,
-		Date:        "",
-	})
-	if content == nil {
-		w.Write(emptyArr)
-		return
+	ln := len(content)
+	if ln != 0 {
+		// no content
+		respBody["newest_at"] = (*content[ln-1])["friendship_started"]
+		respBody["results_count"] = ln
+		respBody["data"] = content
 	}
-	body, err := json.Marshal(content)
-	if err != nil {
-		s.logger.Errorf("failed convert the list of friend suggestions into json for due to %w", err)
-	}
-	w.Write(body)
+	respBody["state"] = success
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
 func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

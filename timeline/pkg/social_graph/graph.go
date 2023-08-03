@@ -27,9 +27,17 @@ const suggestFriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	OPTIONS { uniqueVertices: "path" }
 	FILTER e.kind == "friend" 
 	&& e.started_at > DATE_ISO8601(@startedThreshold)
-	SORT e.started_at
+	COLLECT key = v._key INTO groups
+	SORT null
+	SORT groups[0].e.started_at
 	LIMIT @noOfSuggestions
-	RETURN { "_key" : v._key, "username" : v.username, "image_url": v.image_url }`
+	RETURN {"key" : key, "username" : groups[0].v.username, "image_url": groups[0].v.image_url, "faculty": groups[0].v.faculty, 
+	"field": groups[0].v.degree_info.field, "entry": groups[0].v.degree_info.entry, "friendship_started": groups[0].e.started_at }`
+
+const getOrder1FriendsQuery string = `FOR v,e IN 1..1 OUTBOUND
+	@userNode friends
+	FILTER e.kind == "friend"
+	RETURN v._key`
 
 const getReactionQuery string = `FOR v,e IN 1..1 INBOUND @mediaNode reactions
     RETURN { "like": e["like"], "love": e.love, "laugh": e.laugh,
@@ -139,13 +147,36 @@ func (sgr *socialGraph) ListOwnersPosts(ctx context.Context, userKey, lastPostTi
 	return posts, nil
 }
 
-func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, startedThreshold string, noOfSuggestions int) ([]*urepo.User, error) {
-	bindVars := map[string]interface{}{
-		"userNode":         sgr.userRepo.MkUserDocId(userId),
+func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId, startedThreshold string, noOfSuggestions int) ([]*map[string]string, error) {
+	userDocId := sgr.userRepo.MkUserDocId(userId)
+	bindVars1 := map[string]interface{}{
+		"userNode":         userDocId,
 		"startedThreshold": startedThreshold,
 		"noOfSuggestions":  noOfSuggestions,
 	}
-	return sgr.userRepo.ListUsers(ctx, suggestFriendsQuery, bindVars)
+	order2Nodes, err := sgr.userRepo.ListUsersV2(ctx, suggestFriendsQuery, bindVars1)
+	if err != nil {
+		return order2Nodes, fmt.Errorf("falied to list 2nd order user info due to %v", err)
+	}
+	order1Friends, err := sgr.userRepo.ListStrings(ctx, getOrder1FriendsQuery, map[string]interface{}{"userNode": userDocId})
+	if err != nil {
+		return order2Nodes, fmt.Errorf("failed to list 1st order users due to %v", err)
+	}
+	results := []*map[string]string{}
+	// remove 1st order nodes from 2nd order nodes
+	for _, node2 := range order2Nodes {
+		notFound := true
+		for _, key1 := range order1Friends {
+			if *key1 == (*node2)["key"] {
+				notFound = false
+				break
+			}
+		}
+		if notFound {
+			results = append(results, node2)
+		}
+	}
+	return results, nil
 }
 
 func (sgr *socialGraph) UpdateMediaReaction(ctx context.Context, fromUserKey, toMediaKey, key string, newDoc map[string]interface{}) (string, error) {

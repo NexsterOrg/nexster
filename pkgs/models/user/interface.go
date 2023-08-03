@@ -12,6 +12,7 @@ type Interface interface {
 	ListUsersV2(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
 	CountUsers(ctx context.Context, query string, bindVars map[string]interface{}) (int, error)
 	GetUser(ctx context.Context, key string) (*User, error)
+	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]*string, error)
 }
 
 // TODO:
