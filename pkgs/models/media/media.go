@@ -21,23 +21,44 @@ func NewRepo(argClient *argdb.Client) *mediaRepo {
 }
 
 func (mr *mediaRepo) ListMedia(ctx context.Context, query string, bindVars map[string]interface{}) ([]*Media, error) {
-	var posts []*Media
+	var medias []*Media
 	cursor, err := mr.argClient.Db.Query(ctx, query, bindVars)
 	if err != nil {
-		return posts, err
+		return medias, err
 	}
 	defer cursor.Close()
 
 	for {
-		var post Media
-		_, err := cursor.ReadDocument(ctx, &post)
+		var media Media
+		_, err := cursor.ReadDocument(ctx, &media)
 		if driver.IsNoMoreDocuments(err) {
-			return posts, nil
+			return medias, nil
 		} else if err != nil {
 			log.Println(err)
 			continue
 		}
-		posts = append(posts, &post)
+		medias = append(medias, &media)
+	}
+}
+
+func (mr *mediaRepo) ListMediaWithOwner(ctx context.Context, query string, bindVars map[string]interface{}) ([]*MediaWithOwner, error) {
+	var mediasWithOwners []*MediaWithOwner
+	cursor, err := mr.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return mediasWithOwners, err
+	}
+	defer cursor.Close()
+
+	for {
+		var mediaWithOwner MediaWithOwner
+		_, err := cursor.ReadDocument(ctx, &mediaWithOwner)
+		if driver.IsNoMoreDocuments(err) {
+			return mediasWithOwners, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		mediasWithOwners = append(mediasWithOwners, &mediaWithOwner)
 	}
 }
 

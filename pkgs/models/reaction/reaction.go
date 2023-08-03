@@ -3,8 +3,10 @@ package reaction
 import (
 	"context"
 	"fmt"
+	"log"
 
 	driver "github.com/arangodb/go-driver"
+	"github.com/google/uuid"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
@@ -32,27 +34,106 @@ func NewRepo(argClient *argdb.Client) *reactionRepo {
 // This will update the document in Reaction collection for the given key.
 // If the key is not existing, it will create a new document.
 // fromUserId and toMediaId format should be "collection/key"
-func (rerp *reactionRepo) UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) error {
+func (rerp *reactionRepo) UpdateReactions(ctx context.Context, fromUserId, toMediaId, key string, updateDoc map[string]interface{}) (string, error) {
 	newDoc, err := convertBody(updateDoc)
 	if err != nil {
-		return fmt.Errorf("failed to update reaction for id %s due to %v", key, err)
+		return "", fmt.Errorf("failed to update reaction for id %s due to %v", key, err)
 	}
 	_, err = rerp.argClient.Coll.UpdateDocument(ctx, key, newDoc)
-	if driver.IsArangoError(err) {
-		// TODO
-		// Key generation method should be placed here. do we need to generator a new key or go with given one??
-		_, err = rerp.argClient.Coll.CreateDocument(ctx, createDocTemplate(fromUserId, toMediaId, key, newDoc))
-		// Issue:
-		// Edge is created even if the User or Media node is non-existing one.
-		if err != nil {
-			return fmt.Errorf("failed to create new doc %v", err)
-		}
-		return nil
-	}
+	// if driver.IsArangoError(err) {
+	// 	newKey := uuid.New().String()
+	// 	// TODO
+	// 	// Key generation method should be placed here. do we need to generator a new key or go with given one??
+	// 	_, err = rerp.argClient.Coll.CreateDocument(ctx, createDocTemplate(fromUserId, toMediaId, newKey, newDoc))
+	// 	// Issue:
+	// 	// Edge is created even if the User or Media node is non-existing one.
+	// 	if err != nil {
+	// 		return "", fmt.Errorf("failed to create new doc %v", err)
+	// 	}
+	// 	return newKey, nil
+	// }
 	if err != nil {
-		return fmt.Errorf("failed to update doc %v", err)
+		return "", fmt.Errorf("failed to update doc %v", err)
 	}
-	return nil
+	return key, nil
+}
+
+func (rerp *reactionRepo) CreateReactionLink(ctx context.Context, fromUserId, toMediaId string, updateDoc map[string]interface{}) (string, error) {
+	newDoc, err := convertBody(updateDoc)
+	if err != nil {
+		return "", fmt.Errorf("failed to create reaction link due to %v", err)
+	}
+	newKey := uuid.New().String()
+	_, err = rerp.argClient.Coll.CreateDocument(ctx, createDocTemplate(fromUserId, toMediaId, newKey, newDoc))
+	if err != nil {
+		return "", fmt.Errorf("failed to create reaction link %v", err)
+	}
+	return newKey, nil
+}
+
+func (rerp *reactionRepo) GetReactionsCount(ctx context.Context, query string, bindVars map[string]interface{}) (map[string]int, error) {
+	results := map[string]int{}
+	cursor, err := rerp.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+	var likeCount, loveCount, laughCount, sadCount, insightfulCount int
+	for {
+		var reaction Reaction
+		_, err := cursor.ReadDocument(ctx, &reaction)
+		if driver.IsNoMoreDocuments(err) {
+			return map[string]int{
+				like: likeCount, love: loveCount, laugh: laughCount,
+				sad: sadCount, insightful: insightfulCount}, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		if reaction.Like {
+			likeCount++
+		}
+		if reaction.Love {
+			loveCount++
+		}
+		if reaction.Laugh {
+			laughCount++
+		}
+		if reaction.Sad {
+			sadCount++
+		}
+		if reaction.Insightful {
+			insightfulCount++
+		}
+	}
+}
+
+// If no link is found, then return empty Reaction Struct. (Key is empty string)
+func (rerp *reactionRepo) GetViewersReactions(ctx context.Context, query string, bindVars map[string]interface{}) (Reaction, error) {
+	cursor, err := rerp.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return Reaction{}, err
+	}
+	var reacts []Reaction
+	cnt := 0
+	for {
+		var react Reaction
+		_, err := cursor.ReadDocument(ctx, &react)
+		if driver.IsNoMoreDocuments(err) {
+			if cnt == 1 {
+				return reacts[0], nil
+			}
+			if cnt == 0 {
+				return Reaction{}, nil
+			}
+			return Reaction{}, fmt.Errorf("more than one reaction edges exist")
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		reacts = append(reacts, react)
+		cnt++
+	}
 }
 
 func convertBody(doc map[string]interface{}) (map[string]bool, error) {

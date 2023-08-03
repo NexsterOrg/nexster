@@ -66,6 +66,27 @@ func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars ma
 	}
 }
 
+func (uc *userCtrler) ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]*string, error) {
+	results := []*string{}
+	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
+}
+
 func (uc *userCtrler) CountUsers(ctx context.Context, query string, bindVars map[string]interface{}) (int, error) {
 	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
 	if err != nil {
@@ -84,4 +105,10 @@ func (uc *userCtrler) CountUsers(ctx context.Context, query string, bindVars map
 		}
 		return count, nil
 	}
+}
+
+func (uc *userCtrler) GetUser(ctx context.Context, key string) (*User, error) {
+	user := &User{}
+	_, err := uc.argClient.Coll.ReadDocument(ctx, key, user)
+	return user, err
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
+	"github.com/rs/cors"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
@@ -29,21 +30,35 @@ func main() {
 	logger.EnableColor()
 
 	router := httprouter.New()
-	argdbClient := argdb.NewDbClient(ctx, argdbCfg)
-	argCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
+	argRactCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
+	argMedCollClient := argdb.NewCollClient(ctx, argdbCfg, mrepo.MediaColl)
+	argUsrCollClient := argdb.NewCollClient(ctx, argdbCfg, urepo.UsersColl)
 
-	mediaRepo := mrepo.NewRepo(argdbClient)
-	userRepo := urepo.NewCtrler(argdbClient)
-	reactRepo := rrepo.NewRepo(argCollClient)
+	mediaRepo := mrepo.NewRepo(argMedCollClient)
+	userRepo := urepo.NewCtrler(argUsrCollClient)
+	reactRepo := rrepo.NewRepo(argRactCollClient)
 
 	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/timeline/recent_posts", srv.ListRecentPostsForTimeline)
+	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
+	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 
-	router.PUT("/timeline/reactions", srv.UpdateMediaReactions)
+	router.PUT("/timeline/reactions/:reaction_id", srv.UpdateMediaReactions)
 
+	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
+		AllowCredentials:   true,
+		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		OptionsPassthrough: true,
+		// Enable Debugging for testing, consider disabling in production
+		Debug: false,
+	})
+
+	handler := c.Handler(router)
 	log.Println("Listen....8000")
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe(":8000", handler))
 }

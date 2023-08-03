@@ -9,6 +9,10 @@ import (
 // message body information
 const ContentType string = "Content-Type"
 const ContentLength string = "Content-Length"
+const AllowOrigin string = "Access-Control-Allow-Origin"
+const AllowMethods string = "Access-Control-Allow-Methods"
+
+const AllMethods string = "GET, POST, PUT, DELETE, OPTIONS"
 
 const Date string = "Date"
 
@@ -16,9 +20,11 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type Interface interface {
-	ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
-	UpdateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type Reaction struct {
