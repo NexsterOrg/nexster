@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -267,7 +267,7 @@ func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, heade
 
 func (s *server) readReactionJson(r *http.Request) (map[string]interface{}, error) {
 	var data map[string]interface{}
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		return data, err

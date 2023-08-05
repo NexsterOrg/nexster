@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -243,7 +243,7 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 	data := &FriendRequest{}
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		return data, err
@@ -256,7 +256,7 @@ func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 
 func (s *server) readFriendReqAccptJson(r *http.Request) (*FriendReqAcceptance, error) {
 	data := &FriendReqAcceptance{}
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		return data, err
@@ -265,13 +265,6 @@ func (s *server) readFriendReqAccptJson(r *http.Request) (*FriendReqAcceptance, 
 		return data, err
 	}
 	return data, nil
-}
-
-func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
-	for key, val := range headers {
-		w.Header().Add(key, val)
-	}
-	w.WriteHeader(statusCode)
 }
 
 func (s *server) sendRespMsg(w http.ResponseWriter, statusCode int, headers map[string]string, body map[string]interface{}) {
