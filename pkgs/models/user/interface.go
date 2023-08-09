@@ -24,3 +24,10 @@ type User struct {
 	ImageUrl string `json:"image_url"`
 	Headling string `json:"headling"`
 }
+
+type UserRole int
+
+const (
+	Owner UserRole = iota
+	Viewer
+)

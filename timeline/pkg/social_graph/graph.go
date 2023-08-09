@@ -197,3 +197,10 @@ func (sgr *socialGraph) CreateMediaReaction(ctx context.Context, fromUserKey, to
 	}
 	return sgr.reactRepo.CreateReactionLink(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), newDoc)
 }
+
+func (sgr *socialGraph) GetRole(authUserKey, userKey string) urepo.UserRole {
+	if authUserKey != userKey {
+		return urepo.Viewer
+	}
+	return urepo.Owner
+}
