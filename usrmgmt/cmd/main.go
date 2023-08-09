@@ -41,7 +41,14 @@ func main() {
 
 	router := httprouter.New()
 
+	// test api
+	router.GET("/usrmgmt/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("You are in usrmgmt/test page...!"))
+	})
+
 	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
+	router.GET("/usrmgmt/set-cookie", srv.SetCookie)
 
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
@@ -49,6 +56,6 @@ func main() {
 	router.DELETE("/usrmgmt/friend_req/:friend_req_id", srv.RemovePendingFriendReq)
 	router.DELETE("/usrmgmt/friend/:friend_id", srv.RemoveFriendship)
 
-	log.Println("Listen....8000")
+	log.Println("usrmgmt_server - Listen 8000.....")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }

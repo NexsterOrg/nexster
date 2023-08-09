@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
 
+	jwtPrvdr "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
 
@@ -20,6 +22,10 @@ const (
 	defaultPageNo   int    = 1
 	defaultPageSize int    = 20
 )
+
+// Auth Provider Related Configs
+const authProvider string = "usrmgmt"
+const timeline string = "timeline"
 
 type server struct {
 	scGraph socigr.Interface
@@ -239,6 +245,31 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 	respBody["total_count"] = totalCount
 
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+// TODO: This endpoint handler should be removed when the login logic handler implemented.
+func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	subject := "current-user_key" // TODO: change to user_key of authenticated user.
+	aud := []string{authProvider, timeline}
+	token, err := jwtPrvdr.GenJwtToken(authProvider, subject, aud)
+
+	if err != nil {
+		// log the error
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:  "token",
+		Value: token,
+		// Secure:   true, // TODO: Enable Secure: true, once you have the https connection.
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/", // Cookie is valid for all paths
+		MaxAge:   600, // Valid only for 10min (only in development)
+	})
+	log.Println("set a cookie now")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("New jwt token enabled...!"))
 }
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
