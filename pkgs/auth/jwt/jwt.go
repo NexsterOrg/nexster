@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +18,10 @@ const (
 	loginPageUrl string = "http://192.168.1.101/test" // TODO: Need to change to Login page URL
 	refTime      string = "2023-01-01T00:00:00.000Z"
 )
+
+type jwtUserKeyType string
+
+const JwtUserKey jwtUserKeyType = "user_key"
 
 // Responsibilities
 // Extract the JWT token, Validate sign/algo, validate claims, direct request to signup/signin pages if validation failed.
@@ -42,7 +47,7 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}
-	err = jah.validateToken(tokenCookie.Value)
+	subject, err := jah.validateToken(tokenCookie.Value)
 	// jwt token is invalid
 	if err != nil {
 		http.SetCookie(w, &http.Cookie{
@@ -57,21 +62,22 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}
-	jah.handler.ServeHTTP(w, r)
+	// shallow copy of req with user_key
+	jah.handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), JwtUserKey, subject)))
 }
 
 // TODO:
 // subject check and handover methods need to be added.
-func (jah *JwtAuthHandler) validateToken(tokenString string) error {
+func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 	// TODO: Need to think about how to read and share same public key acorss components
 	key, err := os.ReadFile(publicKeyPemFile)
 	if err != nil {
-		return fmt.Errorf("failed to read public key pem file: %v", err)
+		return "", fmt.Errorf("failed to read public key pem file: %v", err)
 	}
 
 	publicKey, err := jwt.ParseECPublicKeyFromPEM(key)
 	if err != nil {
-		return fmt.Errorf("failed parse EC public key: %v", err)
+		return "", fmt.Errorf("failed parse EC public key: %v", err)
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -83,21 +89,21 @@ func (jah *JwtAuthHandler) validateToken(tokenString string) error {
 
 	// Can be due to expiration of JWT
 	if err != nil {
-		return fmt.Errorf("failed to parse: %v", err)
+		return "", fmt.Errorf("failed to parse: %v", err)
 	}
 
 	// Verify the token's signature
 	if !token.Valid {
-		return fmt.Errorf("invalid token signature")
+		return "", fmt.Errorf("invalid token signature")
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return fmt.Errorf("invalid token claims")
+		return "", fmt.Errorf("invalid token claims")
 	}
 
 	// We only support jwt issued by usrmgmt server
 	if claims["iss"].(string) != jah.issuer {
-		return fmt.Errorf("unsupport issuer %s", claims["iss"].(string))
+		return "", fmt.Errorf("unsupport issuer %s", claims["iss"].(string))
 	}
 	notValidAud := true
 	if audClaims, ok := claims["aud"].([]interface{}); ok {
@@ -110,14 +116,14 @@ func (jah *JwtAuthHandler) validateToken(tokenString string) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("unsupport claims found in jwt payload")
+		return "", fmt.Errorf("unsupport claims found in jwt payload")
 	}
 
 	if notValidAud {
-		return fmt.Errorf("aud validation is falied")
+		return "", fmt.Errorf("aud validation is falied")
 	}
-	// subject := claims["sub"].(string)  // Contain user_key. Need to put into context obj and handover to next handler
-	return nil
+
+	return claims["sub"].(string), nil
 }
 
 // This is not a capability of Auth Handler. This is only used by usrmgmt server to generate jwt token.
