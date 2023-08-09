@@ -10,12 +10,16 @@ import (
 	"github.com/rs/cors"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
+
+const issuer string = "usrmgmt"
+const asAud string = "timeline"
 
 func main() {
 	ctx := context.Background()
@@ -49,6 +53,8 @@ func main() {
 
 	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
 
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
@@ -58,7 +64,7 @@ func main() {
 		Debug: false,
 	})
 
-	handler := c.Handler(router)
-	log.Println("Listen....8000")
-	log.Fatal(http.ListenAndServe(":8000", handler))
+	handler := c.Handler(jwtHandler)
+	log.Println("timeline_server - Listen 8001.....")
+	log.Fatal(http.ListenAndServe(":8001", handler))
 }
