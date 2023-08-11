@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -244,6 +245,23 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 	respBody["total_count"] = totalCount
 
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+// TODO: This endpoint handler should be removed when the login logic handler implemented.
+func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	subject := "482191" // TODO: change to user_key of authenticated user.
+	aud := []string{authProvider, timeline}
+	token, err := jwtPrvdr.GenJwtToken(authProvider, subject, aud)
+
+	if err != nil {
+		// log the error
+		s.logger.Errorf("falied to Set-cookie: %v", err)
+		return
+	}
+
+	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Authorization header set in response")
 }
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -42,26 +43,17 @@ func NewHandler(iss string, asAud string, h http.Handler) *JwtAuthHandler {
 }
 
 func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	tokenCookie, err := r.Cookie(tokenName)
+	jwtToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	// "token" is not found in cookies
-	if err != nil {
-		log.Println("failed to extract cookie: ", err)
+	if jwtToken == "" {
+		log.Println("No Authorization header is provided") // TODO: remove in productiono environemtn
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}
-	subject, err := jah.validateToken(tokenCookie.Value)
+	subject, err := jah.validateToken(jwtToken)
 	// jwt token is invalid
 	if err != nil {
-		http.SetCookie(w, &http.Cookie{
-			Name:  tokenName,
-			Value: "",
-			// Secure:   true, // TODO: Enable Secure: true, once you have the https connection.
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
-			MaxAge:   -1,
-		})
-		log.Println("failed to validate cookie: ", err)
+		log.Println("failed to validate token: ", err)
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}

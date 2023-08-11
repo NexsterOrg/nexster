@@ -48,7 +48,7 @@ func main() {
 	})
 
 	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
-	router.GET("/usrmgmt/set-cookie", srv.SetCookie)
+	router.GET("/usrmgmt/set-token", srv.SetAuthToken)
 
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
