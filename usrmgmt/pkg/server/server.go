@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -249,12 +248,13 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	subject := "current-user_key" // TODO: change to user_key of authenticated user.
+	subject := "482191" // TODO: change to user_key of authenticated user.
 	aud := []string{authProvider, timeline}
 	token, err := jwtPrvdr.GenJwtToken(authProvider, subject, aud)
 
 	if err != nil {
 		// log the error
+		s.logger.Errorf("falied to Set-cookie: %v", err)
 		return
 	}
 
@@ -267,7 +267,6 @@ func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.
 		Path:     "/", // Cookie is valid for all paths
 		MaxAge:   600, // Valid only for 10min (only in development)
 	})
-	log.Println("set a cookie now")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("New jwt token enabled...!"))
 }

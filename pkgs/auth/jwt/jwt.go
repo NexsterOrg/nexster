@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -10,8 +11,8 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-const publicKeyPemFile string = "path to public_key.pem"
-const privateKeyPemFile string = "path to private_key_pkcs8.pem"
+const publicKeyPemFile string = "path-to-public_key.pem"
+const privateKeyPemFile string = "path-to-private_key_pkcs8.pem"
 
 const (
 	tokenName    string = "token"
@@ -44,6 +45,7 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie(tokenName)
 	// "token" is not found in cookies
 	if err != nil {
+		log.Println("failed to extract cookie: ", err)
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}
@@ -59,6 +61,7 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Path:     "/",
 			MaxAge:   -1,
 		})
+		log.Println("failed to validate cookie: ", err)
 		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
 		return
 	}
