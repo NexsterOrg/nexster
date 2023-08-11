@@ -53,18 +53,18 @@ func main() {
 
 	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
 
-	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
-
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedHeaders:     []string{"Authorization"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production
 		Debug: false,
 	})
 
-	handler := c.Handler(jwtHandler)
+	handler := c.Handler(router)
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, handler)
 	log.Println("timeline_server - Listen 8001.....")
-	log.Fatal(http.ListenAndServe(":8001", handler))
+	log.Fatal(http.ListenAndServe(":8001", jwtHandler))
 }

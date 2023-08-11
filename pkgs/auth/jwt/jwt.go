@@ -15,12 +15,6 @@ import (
 const publicKeyPemFile string = "path-to-public_key.pem"
 const privateKeyPemFile string = "path-to-private_key_pkcs8.pem"
 
-const (
-	tokenName    string = "token"
-	loginPageUrl string = "http://192.168.1.101/test" // TODO: Need to change to Login page URL
-	refTime      string = "2023-01-01T00:00:00.000Z"
-)
-
 type jwtUserKeyType string
 
 const JwtUserKey jwtUserKeyType = "user_key"
@@ -43,18 +37,22 @@ func NewHandler(iss string, asAud string, h http.Handler) *JwtAuthHandler {
 }
 
 func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		jah.handler.ServeHTTP(w, r)
+		return
+	}
 	jwtToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	// "token" is not found in cookies
 	if jwtToken == "" {
 		log.Println("No Authorization header is provided") // TODO: remove in productiono environemtn
-		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	subject, err := jah.validateToken(jwtToken)
 	// jwt token is invalid
 	if err != nil {
 		log.Println("failed to validate token: ", err)
-		http.Redirect(w, r, loginPageUrl, http.StatusSeeOther)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	// shallow copy of req with user_key
