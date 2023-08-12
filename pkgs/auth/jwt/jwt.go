@@ -28,12 +28,18 @@ type JwtAuthHandler struct {
 	asAudience string
 }
 
+var _ Interface = (*JwtAuthHandler)(nil)
+
 func NewHandler(iss string, asAud string, h http.Handler) *JwtAuthHandler {
 	return &JwtAuthHandler{
 		issuer:     iss,
 		asAudience: asAud,
 		handler:    h,
 	}
+}
+
+func (jah *JwtAuthHandler) AuthDisabledServeHTTP(w http.ResponseWriter, r *http.Request) {
+	jah.handler.ServeHTTP(w, r)
 }
 
 func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,8 +65,6 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	jah.handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), JwtUserKey, subject)))
 }
 
-// TODO:
-// subject check and handover methods need to be added.
 func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 	// TODO: Need to think about how to read and share same public key acorss components
 	key, err := os.ReadFile(publicKeyPemFile)
