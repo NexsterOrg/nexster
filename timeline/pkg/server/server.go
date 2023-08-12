@@ -52,8 +52,8 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
 		// failed to convert into string, badrequest
-		s.logger.Warn("failed list recent posts: unsupported user_key type in JWT token")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		s.logger.Warn("failed list recent posts: unsupported user_key type in JWT token: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
 		w.Write(emptyArr)
 		return
 	}
@@ -106,8 +106,8 @@ func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Reque
 
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
-		s.logger.Warn("failed list owners posts: unsupported user_key type in JWT token")
-		s.setResponseHeaders(w, http.StatusBadRequest, map[string]string{Date: ""})
+		s.logger.Warn("failed list owners posts: unsupported user_key type in JWT token: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
 		w.Write(emptyArr)
 		return
 	}
@@ -163,19 +163,18 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 		"results_count": 0,
 		"data":          []map[string]string{},
 	}
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed list friend suggestions: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	if userId = r.URL.Query().Get("userid"); userId == "" {
 		s.logger.Errorf("failed list friend suggestions since userid query parameter is empty")
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
-	// Check the role & permissions
-	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
-	if !ok {
-		s.logger.Warn("failed list friend suggestions: unsupported user_key type in JWT token")
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
-		return
-	}
-
 	// Check Owner permissions
 	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
 		s.logger.Warn("failed list friend suggestions: unauthorized request")
@@ -224,6 +223,13 @@ func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p 
 		"data":  map[string]string{"key": ""},
 	}
 
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed update media reaction: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	reactionKey = p.ByName("reaction_id")
 
 	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
@@ -232,13 +238,6 @@ func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p 
 		return
 	}
 
-	// Check the role & permissions
-	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
-	if !ok {
-		s.logger.Warn("failed update media reaction: unsupported user_key type in JWT token")
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
-		return
-	}
 	// Rector_Id == Authenticated_User
 	if s.scGraph.GetRole(jwtUserKey, fromUserKey) != urepo.Owner {
 		s.logger.Warn("failed update media reaction: unauthorized request")
@@ -286,20 +285,19 @@ func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ 
 		"state": failed,
 		"data":  map[string]string{"key": ""},
 	}
-
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed create media reaction: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
 		s.logger.Errorf("failed to create media reaction since reactor_id query parameter is empty")
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
 
-	// Check the role & permissions
-	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
-	if !ok {
-		s.logger.Warn("failed create media reaction: unsupported user_key type in JWT token")
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
-		return
-	}
 	// Rector_Id == Authenticated_User
 	if s.scGraph.GetRole(jwtUserKey, fromUserKey) != urepo.Owner {
 		s.logger.Warn("failed create media reaction: unauthorized request")
