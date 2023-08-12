@@ -32,7 +32,7 @@ const suggestFriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	SORT groups[0].e.started_at
 	LIMIT @noOfSuggestions
 	RETURN {"key" : key, "username" : groups[0].v.username, "image_url": groups[0].v.image_url, "faculty": groups[0].v.faculty, 
-	"field": groups[0].v.degree_info.field, "entry": groups[0].v.degree_info.entry, "friendship_started": groups[0].e.started_at }`
+	"field": groups[0].v.degree_info.field, "batch": groups[0].v.batch, "friendship_started": groups[0].e.started_at }`
 
 const getOrder1FriendsQuery string = `FOR v,e IN 1..1 OUTBOUND
 	@userNode friends
@@ -196,4 +196,11 @@ func (sgr *socialGraph) CreateMediaReaction(ctx context.Context, fromUserKey, to
 		return sgr.reactRepo.UpdateReactions(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), viewersReacts.Key, newDoc)
 	}
 	return sgr.reactRepo.CreateReactionLink(ctx, sgr.userRepo.MkUserDocId(fromUserKey), sgr.mediaRepo.MkMediaDocId(toMediaKey), newDoc)
+}
+
+func (sgr *socialGraph) GetRole(authUserKey, userKey string) urepo.UserRole {
+	if authUserKey != userKey {
+		return urepo.Viewer
+	}
+	return urepo.Owner
 }

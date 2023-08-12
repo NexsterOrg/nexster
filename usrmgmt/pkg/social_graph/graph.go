@@ -143,6 +143,8 @@ func (sgr *socialGraph) CreateFriend(ctx context.Context, friendReqKey, user1, u
 	return results, nil
 }
 
+// TODO:
+// This operation should be atomic. If first one failed, whole operation should be canceled.
 func (sgr *socialGraph) RemoveFriend(ctx context.Context, key1, key2 string) error {
 	if err := sgr.frndCtrler.RemoveFriendEdge(ctx, key1); err != nil {
 		return err
@@ -162,4 +164,11 @@ func (sgr *socialGraph) CountFriends(ctx context.Context, userId string) (int, e
 	return sgr.usrCtrler.CountUsers(ctx, totalFriends, map[string]interface{}{
 		"startNode": sgr.usrCtrler.MkUserDocId(userId),
 	})
+}
+
+func (sgr *socialGraph) GetRole(authUserKey, userKey string) usr.UserRole {
+	if authUserKey != userKey {
+		return usr.Viewer
+	}
+	return usr.Owner
 }

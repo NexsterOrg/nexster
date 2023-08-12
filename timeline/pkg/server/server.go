@@ -1,9 +1,8 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,6 +10,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
 
+	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
 
@@ -40,15 +41,33 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
  * TODO: Need to include logged user's relation with reactions
  * Retrieve list of most recent posts before the given time threshold.
  * Query Parameters : last_post_at, max_post_count
+ * Need Owner permission
  */
 func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var userId, lastPostAt, postCountStr string
-	ctx := context.Background()
 	emptyArr, _ := json.Marshal([]int{})
 	userId = p.ByName("userid")
 
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		// failed to convert into string, badrequest
+		s.logger.Warn("failed list recent posts: unsupported user_key type in JWT token: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+	// Check Owner permissions
+	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
+		// Unauthorized request, what to do
+		s.logger.Warn("failed list recent posts: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+
 	if lastPostAt = r.URL.Query().Get("last_post_at"); lastPostAt == "" {
-		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z")
+		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z") // standard format
 	}
 	postCountStr = r.URL.Query().Get("max_post_count")
 	postCount, err := strconv.Atoi(postCountStr)
@@ -56,7 +75,7 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 		postCount = defaultPostCount
 	}
 	visibility := "public"
-	content, err := s.scGraph.ListRecentPosts(ctx, userId, lastPostAt, visibility, postCount)
+	content, err := s.scGraph.ListRecentPosts(r.Context(), userId, lastPostAt, visibility, postCount)
 	if err != nil {
 		s.logger.Errorf("failed list recent posts due to %w", err)
 		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
@@ -79,12 +98,26 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	w.Write(body)
 }
 
-// List posts for private timeline
+// List posts for private timeline, Need Owner Permission
 func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var userId, lastPostAt, postCountStr string
-	ctx := context.Background()
 	emptyArr, _ := json.Marshal([]int{})
 	userId = p.ByName("userid")
+
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed list owners posts: unsupported user_key type in JWT token: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
+	// Check Owner permissions
+	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
+		s.logger.Warn("failed list owners posts: unauthorized request")
+		s.setResponseHeaders(w, http.StatusUnauthorized, map[string]string{Date: ""})
+		w.Write(emptyArr)
+		return
+	}
 
 	if lastPostAt = r.URL.Query().Get("last_post_at"); lastPostAt == "" {
 		lastPostAt = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02T15:04:05.000Z")
@@ -94,7 +127,7 @@ func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		postCount = defaultPostCount
 	}
-	content, err := s.scGraph.ListOwnersPosts(ctx, userId, lastPostAt, postCount)
+	content, err := s.scGraph.ListOwnersPosts(r.Context(), userId, lastPostAt, postCount)
 	if err != nil {
 		s.logger.Errorf("failed list owners posts due to %w", err)
 		s.setResponseHeaders(w, http.StatusInternalServerError, map[string]string{Date: ""})
@@ -116,15 +149,13 @@ func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Reque
 	w.Write(body)
 }
 
+// Need Owner Permission
 func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var userId, startedAt, noOfSugStr string
-	ctx := context.Background()
-
 	headers := map[string]string{
 		ContentType: ApplicationJson_Utf8,
 		Date:        "",
 	}
-
 	respBody := map[string]interface{}{
 		"state":         failed,
 		"started_at":    "",
@@ -132,12 +163,25 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 		"results_count": 0,
 		"data":          []map[string]string{},
 	}
-
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed list friend suggestions: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	if userId = r.URL.Query().Get("userid"); userId == "" {
 		s.logger.Errorf("failed list friend suggestions since userid query parameter is empty")
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
+	// Check Owner permissions
+	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
+		s.logger.Warn("failed list friend suggestions: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+
 	if startedAt = r.URL.Query().Get("started_at"); startedAt == "" {
 		startedAt = defaultDate
 	}
@@ -148,7 +192,7 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 		noOfSugs = defaultFriendSugs
 	}
 
-	content, err := s.scGraph.ListFriendSuggestions(ctx, userId, startedAt, noOfSugs)
+	content, err := s.scGraph.ListFriendSuggestions(r.Context(), userId, startedAt, noOfSugs)
 	if err != nil {
 		s.logger.Errorf("failed list friend suggestions due to %w", err)
 		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
@@ -166,6 +210,8 @@ func (s *server) ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
+// Logic
+// rector_id == jwtUserKey. rector should be the owner.
 func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var fromUserKey, toMediaKey, reactionKey string
 	headers := map[string]string{
@@ -177,11 +223,25 @@ func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p 
 		"data":  map[string]string{"key": ""},
 	}
 
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed update media reaction: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	reactionKey = p.ByName("reaction_id")
 
 	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
 		s.logger.Errorf("failed update media reaction since reactor_id query parameter is empty")
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		return
+	}
+
+	// Rector_Id == Authenticated_User
+	if s.scGraph.GetRole(jwtUserKey, fromUserKey) != urepo.Owner {
+		s.logger.Warn("failed update media reaction: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
 		return
 	}
 
@@ -203,8 +263,7 @@ func (s *server) UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p 
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
-	ctx := context.Background()
-	updatedKey, err := s.scGraph.UpdateMediaReaction(ctx, fromUserKey, toMediaKey, reactionKey, data)
+	updatedKey, err := s.scGraph.UpdateMediaReaction(r.Context(), fromUserKey, toMediaKey, reactionKey, data)
 	if err != nil {
 		s.logger.Errorf("Failed to Update reaction with id %s for media id %s due %v.", fromUserKey, toMediaKey, err)
 		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
@@ -226,10 +285,23 @@ func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ 
 		"state": failed,
 		"data":  map[string]string{"key": ""},
 	}
-
+	// Check the role & permissions
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed create media reaction: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
 	if fromUserKey = r.URL.Query().Get("reactor_id"); fromUserKey == "" {
 		s.logger.Errorf("failed to create media reaction since reactor_id query parameter is empty")
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		return
+	}
+
+	// Rector_Id == Authenticated_User
+	if s.scGraph.GetRole(jwtUserKey, fromUserKey) != urepo.Owner {
+		s.logger.Warn("failed create media reaction: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
 		return
 	}
 
@@ -245,9 +317,8 @@ func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ 
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
-	ctx := context.Background()
 	// TODO: if the resource is not newly created, status code should be 200.
-	createdKey, err := s.scGraph.CreateMediaReaction(ctx, fromUserKey, toMediaKey, data)
+	createdKey, err := s.scGraph.CreateMediaReaction(r.Context(), fromUserKey, toMediaKey, data)
 	if err != nil {
 		s.logger.Errorf("Failed to create reaction with id %s for media id %s due %v.", fromUserKey, toMediaKey, err)
 		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
@@ -267,7 +338,7 @@ func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, heade
 
 func (s *server) readReactionJson(r *http.Request) (map[string]interface{}, error) {
 	var data map[string]interface{}
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		return data, err

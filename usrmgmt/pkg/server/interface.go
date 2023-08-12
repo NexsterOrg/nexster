@@ -21,6 +21,8 @@ type Interface interface {
 	RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type FriendRequest struct {
@@ -33,7 +35,7 @@ type FriendRequest struct {
 }
 
 type FriendReqAcceptance struct {
-	User1Key   string `json:"user1_id" validate:"required"`
-	User2Key   string `json:"user2_id" validate:"required"`
+	User1Key   string `json:"reqstor_id" validate:"required"`
+	User2Key   string `json:"acceptor_id" validate:"required"`
 	AcceptedAt string `json:"accepted_at" validate:"required"`
 }
