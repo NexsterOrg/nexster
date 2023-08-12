@@ -50,15 +50,15 @@ func main() {
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
-		AllowedHeaders:     []string{"Authorization"},
+		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production
 		Debug: false,
 	})
-	handler := c.Handler(router)
-
-	jwtHandler := jwtAuth.NewHandler(issuer, issuer, handler) // Issuer also become an audience in usrmgmt. Since it is the one issues tokens.
+	jwtHandler := jwtAuth.NewHandler(issuer, issuer, router) // Issuer also become an audience in usrmgmt. Since it is the one issues tokens.
 	authProviderHandler := authprv.NewAuthProvider(jwtHandler)
+
+	handler := c.Handler(authProviderHandler)
 
 	// test api
 	router.GET("/usrmgmt/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -81,5 +81,5 @@ func main() {
 	router.DELETE("/usrmgmt/friend/:friend_id", srv.RemoveFriendship)
 
 	log.Println("usrmgmt_server - Listen 8000.....")
-	log.Fatal(http.ListenAndServe(":8000", authProviderHandler))
+	log.Fatal(http.ListenAndServe(":8000", handler))
 }

@@ -57,14 +57,14 @@ func main() {
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
-		AllowedHeaders:     []string{"Authorization"},
+		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production
 		Debug: false,
 	})
 
-	handler := c.Handler(router)
-	jwtHandler := jwtAuth.NewHandler(issuer, asAud, handler)
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
+	handler := c.Handler(jwtHandler)
 	log.Println("timeline_server - Listen 8001.....")
-	log.Fatal(http.ListenAndServe(":8001", jwtHandler))
+	log.Fatal(http.ListenAndServe(":8001", handler))
 }
