@@ -35,7 +35,7 @@ type FriendRequest struct {
 }
 
 type FriendReqAcceptance struct {
-	User1Key   string `json:"user1_id" validate:"required"`
-	User2Key   string `json:"user2_id" validate:"required"`
+	User1Key   string `json:"reqstor_id" validate:"required"`
+	User2Key   string `json:"acceptor_id" validate:"required"`
 	AcceptedAt string `json:"accepted_at" validate:"required"`
 }

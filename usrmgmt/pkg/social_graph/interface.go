@@ -1,6 +1,10 @@
 package socialgraph
 
-import "context"
+import (
+	"context"
+
+	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+)
 
 type Interface interface {
 	CreateFriendReq(ctx context.Context, reqstorKey, friendKey, mode, state, reqDate string) (map[string]string, error)
@@ -9,4 +13,5 @@ type Interface interface {
 	RemoveFriend(ctx context.Context, key1, key2 string) error
 	ListFriends(ctx context.Context, userId string, offset, count int) ([]*map[string]string, error)
 	CountFriends(ctx context.Context, userId string) (int, error)
+	GetRole(authUserKey, userKey string) usr.UserRole
 }
