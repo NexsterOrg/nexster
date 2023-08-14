@@ -39,6 +39,12 @@ const totalFriends string = `RETURN LENGTH(
 	  OPTIONS { uniqueVertices: "path" }
 	  RETURN 1)`
 
+const totalFriendsV2 string = `RETURN LENGTH(
+    FOR f IN friends
+     FILTER f._from == @startNode
+     RETURN 1
+)`
+
 type socialGraph struct {
 	fReqCtrler freq.Interface
 	frndCtrler frnd.Interface
@@ -171,4 +177,21 @@ func (sgr *socialGraph) GetRole(authUserKey, userKey string) usr.UserRole {
 		return usr.Viewer
 	}
 	return usr.Owner
+}
+
+func (sgr *socialGraph) GetProfileInfo(ctx context.Context, userKey string) (map[string]string, error) {
+	info, err := sgr.usrCtrler.GetUser(ctx, userKey)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	return map[string]string{
+		"key": userKey, "username": info.Username, "faculty": info.Faculty, "field": info.Field, "batch": info.Batch,
+		"img_url": info.ImageUrl, "about": info.About,
+	}, nil
+}
+
+func (sgr *socialGraph) CountFriendsV2(ctx context.Context, userId string) (int, error) {
+	return sgr.frndCtrler.CountFriends(ctx, totalFriendsV2, map[string]interface{}{
+		"startNode": sgr.usrCtrler.MkUserDocId(userId),
+	})
 }

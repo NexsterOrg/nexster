@@ -21,6 +21,8 @@ type Interface interface {
 	RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	GetProfile(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }

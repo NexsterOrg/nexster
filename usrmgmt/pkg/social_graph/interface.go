@@ -14,4 +14,6 @@ type Interface interface {
 	ListFriends(ctx context.Context, userId string, offset, count int) ([]*map[string]string, error)
 	CountFriends(ctx context.Context, userId string) (int, error)
 	GetRole(authUserKey, userKey string) usr.UserRole
+	GetProfileInfo(ctx context.Context, userKey string) (map[string]string, error)
+	CountFriendsV2(ctx context.Context, userId string) (int, error)
 }

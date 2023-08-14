@@ -325,6 +325,54 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
+// permission : Both (owner, viewer)
+func (s *server) GetProfile(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userKey := p.ByName("user_id")
+
+	info, err := s.scGraph.GetProfileInfo(r.Context(), userKey)
+	if err != nil {
+		s.logger.Errorf("failed to get profile info: userKey: %s: %v", userKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state": failed,
+			"data":  map[string]string{},
+		})
+		return
+	}
+	s.sendRespMsg(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}, map[string]interface{}{
+		"state": success,
+		"data":  info,
+	})
+}
+
+func (s *server) GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userKey := p.ByName("user_id")
+	count, err := s.scGraph.CountFriendsV2(r.Context(), userKey)
+	if err != nil {
+		s.logger.Errorf("failed to get friend count: userKey: %s: %v", userKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state": failed,
+			"data":  map[string]string{},
+		})
+		return
+	}
+	s.sendRespMsg(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}, map[string]interface{}{
+		"state": success,
+		"data":  map[string]int{"count": count},
+	})
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	userId := p.ByName("user_id")
