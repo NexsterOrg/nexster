@@ -25,6 +25,8 @@ type Interface interface {
 	UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	ListOwnersViewMedia(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	ListPublicMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type Reaction struct {

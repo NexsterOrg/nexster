@@ -65,3 +65,24 @@ func (mr *mediaRepo) ListMediaWithOwner(ctx context.Context, query string, bindV
 func (mr *mediaRepo) MkMediaDocId(key string) string {
 	return fmt.Sprintf("%s/%s", MediaColl, key)
 }
+
+func (mr *mediaRepo) ListMediaWithCustomFields(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
+	var medias []*map[string]string
+	cursor, err := mr.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return medias, err
+	}
+	defer cursor.Close()
+
+	for {
+		var media map[string]string
+		_, err := cursor.ReadDocument(ctx, &media)
+		if driver.IsNoMoreDocuments(err) {
+			return medias, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		medias = append(medias, &media)
+	}
+}

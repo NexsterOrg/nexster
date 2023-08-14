@@ -10,6 +10,7 @@ type Interface interface {
 	MkFriendDocId(key string) string
 	RemoveFriendEdge(ctx context.Context, key string) error
 	IsFriendEdgeExist(ctx context.Context, user1, user2 string) (bool, error)
+	CountFriends(ctx context.Context, query string, bindVars map[string]interface{}) (int, error)
 }
 
 // document format for `friend` edge

@@ -13,4 +13,6 @@ type Interface interface {
 	ListOwnersPosts(ctx context.Context, userKey, lastPostTimestamp string, noOfPosts int) ([]*map[string]interface{}, error)
 	CreateMediaReaction(ctx context.Context, fromUserKey, toMediaKey string, newDoc map[string]interface{}) (string, error)
 	GetRole(authUserKey, userKey string) urepo.UserRole
+	ListAllMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
+	ListPublicMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
 }

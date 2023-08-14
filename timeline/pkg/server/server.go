@@ -21,6 +21,8 @@ const (
 	defaultPostCount  int    = 10
 	defaultFriendSugs int    = 10
 	defaultDate       string = "2023-01-01T01:00:00.000Z"
+	defaultPageNo     int    = 1
+	defaultPageSize   int    = 10
 )
 
 type server struct {
@@ -327,6 +329,107 @@ func (s *server) CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ 
 	respBody["state"] = success
 	respBody["data"] = map[string]string{"key": createdKey}
 	s.sendRespMsg(w, http.StatusCreated, headers, respBody)
+}
+
+// permission: owner
+func (s *server) ListOwnersViewMedia(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var userKey string
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
+	}
+
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed to list owner view media: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+	if userKey = r.URL.Query().Get("user_id"); userKey == "" {
+		s.logger.Info("failed to list owner view media: user_id query parameter is empty")
+		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		return
+	}
+	// Check the role & permissions
+	if s.scGraph.GetRole(jwtUserKey, userKey) != urepo.Owner {
+		s.logger.Warn("failed to list owner view media: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+	respBody["results_count"] = 0
+	medias, err := s.scGraph.ListAllMedia(r.Context(), userKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list owner view media: %v: id=%s", err, userKey)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	resCount := len(medias)
+	if resCount == 0 {
+		respBody["data"] = []map[string]string{}
+	} else {
+		respBody["data"] = medias
+	}
+	respBody["state"] = success
+	respBody["results_count"] = resCount
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+func (s *server) ListPublicMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
+	}
+	userKey := p.ByName("user_id")
+
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+	respBody["results_count"] = 0
+
+	medias, err := s.scGraph.ListPublicMedia(r.Context(), userKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list public media: %v: id=%s", err, userKey)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	resCount := len(medias)
+	if resCount == 0 {
+		respBody["data"] = []map[string]string{}
+	} else {
+		respBody["data"] = medias
+	}
+	respBody["state"] = success
+	respBody["results_count"] = resCount
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+
 }
 
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {

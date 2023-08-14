@@ -48,6 +48,8 @@ func main() {
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
 	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
+	router.GET("/timeline/media", srv.ListOwnersViewMedia)
+	router.GET("/timeline/media/:user_id", srv.ListPublicMedia)
 
 	router.PUT("/timeline/reactions/:reaction_id", srv.UpdateMediaReactions)
 

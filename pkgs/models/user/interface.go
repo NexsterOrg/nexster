@@ -23,6 +23,10 @@ type User struct {
 	Username string `json:"username"`
 	ImageUrl string `json:"image_url"`
 	Headling string `json:"headling"`
+	Faculty  string `json:"faculty"`
+	Field    string `json:"field"`
+	Batch    string `json:"batch"`
+	About    string `json:"about"`
 }
 
 type UserRole int

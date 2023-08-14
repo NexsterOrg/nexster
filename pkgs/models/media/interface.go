@@ -10,6 +10,7 @@ type Interface interface {
 	MkMediaDocId(key string) string
 	ListMedia(ctx context.Context, query string, bindVars map[string]interface{}) ([]*Media, error)
 	ListMediaWithOwner(ctx context.Context, query string, bindVars map[string]interface{}) ([]*MediaWithOwner, error)
+	ListMediaWithCustomFields(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
 }
 
 type Media struct {

@@ -55,6 +55,19 @@ const getViewerReactions string = `FOR r IN reactions
 	LIMIT 1
 	RETURN r`
 
+const getAllMedia string = `FOR v IN 1..1 INBOUND
+	@userNode mediaOwnerEdges
+	SORT v.created_date DESC
+	LIMIT @offset, @count
+	RETURN {"key": v._key, "image_url": v.link}`
+
+const listPublicMediaQuery string = `FOR v IN 1..1 INBOUND
+	@userNode mediaOwnerEdges
+	FILTER v.visibility == "public"
+	SORT v.created_date DESC
+	LIMIT @offset, @count
+	RETURN {"key": v._key, "image_url": v.link}`
+
 type socialGraph struct {
 	mediaRepo mrepo.Interface
 	userRepo  urepo.Interface
@@ -203,4 +216,20 @@ func (sgr *socialGraph) GetRole(authUserKey, userKey string) urepo.UserRole {
 		return urepo.Viewer
 	}
 	return urepo.Owner
+}
+
+func (sgr *socialGraph) ListAllMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
+	return sgr.mediaRepo.ListMediaWithCustomFields(ctx, getAllMedia, map[string]interface{}{
+		"userNode": sgr.userRepo.MkUserDocId(userKey),
+		"offset":   offset,
+		"count":    count,
+	})
+}
+
+func (sgr *socialGraph) ListPublicMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
+	return sgr.mediaRepo.ListMediaWithCustomFields(ctx, listPublicMediaQuery, map[string]interface{}{
+		"userNode": sgr.userRepo.MkUserDocId(userKey),
+		"offset":   offset,
+		"count":    count,
+	})
 }
