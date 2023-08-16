@@ -68,6 +68,11 @@ const listPublicMediaQuery string = `FOR v IN 1..1 INBOUND
 	LIMIT @offset, @count
 	RETURN {"key": v._key, "image_url": v.link}`
 
+const getUserKey string = `FOR user IN users
+	FILTER user.index_no == @indexNo
+	LIMIT 1
+	RETURN user._key`
+
 type socialGraph struct {
 	mediaRepo mrepo.Interface
 	userRepo  urepo.Interface
@@ -232,4 +237,18 @@ func (sgr *socialGraph) ListPublicMedia(ctx context.Context, userKey string, off
 		"offset":   offset,
 		"count":    count,
 	})
+}
+
+func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error) {
+	res, err := sgr.userRepo.ListStrings(ctx, getUserKey, map[string]interface{}{
+		"indexNo": indexNo,
+	})
+	resLn := len(res)
+	if resLn == 0 {
+		return "", nil
+	}
+	if len(res) > 1 {
+		return "", fmt.Errorf("indexNo=%s is not unique, array of userkeys exists", indexNo)
+	}
+	return *res[0], err
 }

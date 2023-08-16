@@ -50,6 +50,7 @@ func main() {
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestionsForTimeline)
 	router.GET("/timeline/media", srv.ListOwnersViewMedia)
 	router.GET("/timeline/media/:user_id", srv.ListPublicMedia)
+	router.GET("/timeline/r/media/:img_owner_id", srv.ListRoleBasedMedia) // "/r/*" --> for dynamic role based paths
 
 	router.PUT("/timeline/reactions/:reaction_id", srv.UpdateMediaReactions)
 

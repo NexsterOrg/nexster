@@ -432,6 +432,62 @@ func (s *server) ListPublicMedia(w http.ResponseWriter, r *http.Request, p httpr
 
 }
 
+func (s *server) ListRoleBasedMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"data":          []map[string]string{},
+		"results_count": 0,
+	}
+	imgOwnerKey := p.ByName("img_owner_id")
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed to list media: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+
+	var medias []*map[string]string
+	if s.scGraph.GetRole(jwtUserKey, imgOwnerKey) != urepo.Owner {
+		// list public visible images
+		medias, err = s.scGraph.ListPublicMedia(r.Context(), imgOwnerKey, (pageNo-1)*pageSize, pageSize)
+	} else {
+		// list both private and public visible images
+		medias, err = s.scGraph.ListAllMedia(r.Context(), imgOwnerKey, (pageNo-1)*pageSize, pageSize)
+	}
+
+	if err != nil {
+		s.logger.Errorf("failed to list media: %v: imgOwnerKey=%s, authUserKey=%s", err, imgOwnerKey, jwtUserKey)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+
+	resCount := len(medias)
+	if resCount == 0 {
+		respBody["data"] = []map[string]string{}
+	} else {
+		respBody["data"] = medias
+	}
+	respBody["state"] = success
+	respBody["results_count"] = resCount
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
 	for key, val := range headers {
 		w.Header().Add(key, val)

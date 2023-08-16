@@ -27,6 +27,7 @@ type Interface interface {
 	CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	ListOwnersViewMedia(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	ListPublicMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ListRoleBasedMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type Reaction struct {

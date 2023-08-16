@@ -15,4 +15,5 @@ type Interface interface {
 	GetRole(authUserKey, userKey string) urepo.UserRole
 	ListAllMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
 	ListPublicMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
+	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
 }
