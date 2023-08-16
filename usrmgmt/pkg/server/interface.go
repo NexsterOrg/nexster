@@ -25,6 +25,7 @@ type Interface interface {
 	GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type FriendRequest struct {

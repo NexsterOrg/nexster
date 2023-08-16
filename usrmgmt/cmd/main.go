@@ -68,7 +68,10 @@ func main() {
 
 	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
 	router.GET("/usrmgmt/set-token/:user_id", srv.SetAuthToken)
+
+	router.GET("/usrmgmt/indexnos/:index_no", srv.GetUserKeyByIndexNo)
 	router.GET("/usrmgmt/users/:user_id", srv.GetProfile)
+
 	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)

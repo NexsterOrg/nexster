@@ -373,6 +373,28 @@ func (s *server) GetFriendsCount(w http.ResponseWriter, r *http.Request, p httpr
 	})
 }
 
+// owner permission
+func (s *server) GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	indexNo := p.ByName("index_no")
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{"key": ""},
+	}
+	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), indexNo)
+	if err != nil {
+		s.logger.Errorf("failed to get userKey for given indexNo=%s: %v", indexNo, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]string{"key": userKey}
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	userId := p.ByName("user_id")

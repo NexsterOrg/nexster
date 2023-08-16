@@ -45,6 +45,11 @@ const totalFriendsV2 string = `RETURN LENGTH(
      RETURN 1
 )`
 
+const getUserKey string = `FOR user IN users
+	FILTER user.index_no == @indexNo
+	LIMIT 1
+	RETURN user._key`
+
 type socialGraph struct {
 	fReqCtrler freq.Interface
 	frndCtrler frnd.Interface
@@ -194,4 +199,18 @@ func (sgr *socialGraph) CountFriendsV2(ctx context.Context, userId string) (int,
 	return sgr.frndCtrler.CountFriends(ctx, totalFriendsV2, map[string]interface{}{
 		"startNode": sgr.usrCtrler.MkUserDocId(userId),
 	})
+}
+
+func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error) {
+	res, err := sgr.usrCtrler.ListStrings(ctx, getUserKey, map[string]interface{}{
+		"indexNo": indexNo,
+	})
+	resLn := len(res)
+	if resLn == 0 {
+		return "", nil
+	}
+	if len(res) > 1 {
+		return "", fmt.Errorf("indexNo=%s is not unique, array of userkeys exists", indexNo)
+	}
+	return *res[0], err
 }

@@ -16,4 +16,5 @@ type Interface interface {
 	GetRole(authUserKey, userKey string) usr.UserRole
 	GetProfileInfo(ctx context.Context, userKey string) (map[string]string, error)
 	CountFriendsV2(ctx context.Context, userId string) (int, error)
+	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
 }
