@@ -50,6 +50,19 @@ const getUserKey string = `FOR user IN users
 	LIMIT 1
 	RETURN user._key`
 
+const listFriendReqs string = `FOR v,e IN 1..1 INBOUND
+	@userNode friendRequest
+	SORT e.req_date DESC
+	LIMIT @offset, @count
+	RETURN { "user_key": v._key, "username" : v.username, "image_url" : v.image_url, 
+	"batch": v.batch,"faculty": v.faculty, "field" : v.field, 
+	"req_date": e.req_date, "req_key": e._key }`
+
+const allFriendReqsCountQry string = `FOR doc IN friendRequest
+	FILTER doc._to == @userNode
+	COLLECT WITH COUNT INTO len
+	RETURN len`
+
 type socialGraph struct {
 	fReqCtrler freq.Interface
 	frndCtrler frnd.Interface
@@ -66,8 +79,30 @@ func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce
 	}
 }
 
+func (sgr *socialGraph) ListFriendReqs(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
+	return sgr.fReqCtrler.ListStringValueJson(ctx, listFriendReqs, map[string]interface{}{
+		"userNode": sgr.usrCtrler.MkUserDocId(userKey),
+		"offset":   offset,
+		"count":    count,
+	})
+}
+
+func (sgr *socialGraph) GetAllFriendReqsCount(ctx context.Context, userKey string) (int, error) {
+	res, err := sgr.fReqCtrler.ListStrings(ctx, allFriendReqsCountQry, map[string]interface{}{
+		"userNode": sgr.usrCtrler.MkUserDocId(userKey),
+	})
+	if err != nil {
+		return 0, err
+	}
+	if len(res) == 0 {
+		return 0, nil
+	}
+	return res[0], nil
+}
+
 // TODO:
 // 1. Need to check the existance of user nodes.
+// 2. req_date should be system generated
 func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendKey, mode, state, reqDate string) (map[string]string, error) {
 	results := map[string]string{}
 	reqstorId := fmt.Sprintf("%s/%s", userColl, reqstorKey)
@@ -98,6 +133,7 @@ func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendK
 		Mode:    mode,
 		State:   state,
 		ReqDate: reqDate,
+		IsSeen:  false,
 	})
 	if err != nil {
 		return results, fmt.Errorf("failed to create friend req [from %s, to %s]. Error: %v", reqstorId, friendId, err)

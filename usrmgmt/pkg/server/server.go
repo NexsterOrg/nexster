@@ -42,6 +42,71 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
 	}
 }
 
+func (s *server) ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"data":          []map[string]string{},
+		"results_count": 0,
+	}
+
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Infof("failed list friend requests: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+
+	results, err := s.scGraph.ListFriendReqs(r.Context(), jwtUserKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list friend requests: %v: userKey=%s", err, jwtUserKey)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = results
+	respBody["results_count"] = len(results)
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+func (s *server) GetAllFriendReqsCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]int{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Infof("failed to count friend req: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	count, err := s.scGraph.GetAllFriendReqsCount(r.Context(), jwtUserKey)
+	if err != nil {
+		s.logger.Errorf("failed to count all friend requests: %v: userKey=%s", err, jwtUserKey)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]int{"count": count}
+	s.sendRespDefault(w, http.StatusOK, respBody)
+}
+
+// TODO: if the link is not created since there is already a link --> return 200
+// if edge is created --> return 201
 func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	results := map[string]string{}
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
@@ -149,7 +214,10 @@ func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, 
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
-// Create a friendship upon an accept of a friend request
+// Create a friendship upon an accept of a friend request.
+// TODO: This function can refactor.
+// 1. Don't need to bring user1Key since it is in JWT token.
+// 2. AcceptAt timestamp should be system generated.
 func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	headers := map[string]string{
 		ContentType: ApplicationJson_Utf8,
@@ -475,6 +543,15 @@ func (s *server) sendRespMsg(w http.ResponseWriter, statusCode int, headers map[
 	for key, val := range headers {
 		w.Header().Add(key, val)
 	}
+	w.WriteHeader(statusCode)
+	resp, _ := json.Marshal(body)
+	w.Write(resp)
+}
+
+// similar to `sendRespMsg` but only have predefined headers
+func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {
+	w.Header().Add(ContentType, ApplicationJson_Utf8)
+	w.Header().Add(Date, "")
 	w.WriteHeader(statusCode)
 	resp, _ := json.Marshal(body)
 	w.Write(resp)

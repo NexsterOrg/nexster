@@ -74,8 +74,10 @@ func main() {
 
 	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 
+	router.GET("/usrmgmt/friend_req", srv.ListFriendReqs)
 	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
+	router.GET("/usrmgmt/friend_req/count", srv.GetAllFriendReqsCount)
 
 	// TODO: Need to complete the login handler function
 	router.POST("/usrmgmt/login", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

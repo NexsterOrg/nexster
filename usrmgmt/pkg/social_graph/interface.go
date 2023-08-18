@@ -17,4 +17,6 @@ type Interface interface {
 	GetProfileInfo(ctx context.Context, userKey string) (map[string]string, error)
 	CountFriendsV2(ctx context.Context, userId string) (int, error)
 	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
+	ListFriendReqs(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
+	GetAllFriendReqsCount(ctx context.Context, userKey string) (int, error)
 }
