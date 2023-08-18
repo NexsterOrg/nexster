@@ -18,6 +18,8 @@ type Interface interface {
 	MkFriendReqDocId(key string) string
 	IsFriendReqExist(ctx context.Context, query string, bindVars map[string]interface{}) (bool, error)
 	RemoveFriendReqEdge(ctx context.Context, key string) error
+	ListStringValueJson(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
+	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]int, error)
 }
 
 type FriendRequest struct {
@@ -28,4 +30,5 @@ type FriendRequest struct {
 	Mode    string `json:"mode"`
 	State   string `json:"state"`
 	ReqDate string `json:"req_date"`
+	IsSeen  bool   `json:"is_seen"`
 }
