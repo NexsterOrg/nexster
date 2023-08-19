@@ -21,7 +21,7 @@ const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type Interface interface {
 	ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
-	ListFriendSuggestionsForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	ListFriendSuggestions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	UpdateMediaReactions(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateMediaReactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
