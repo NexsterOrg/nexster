@@ -18,15 +18,21 @@ type Interface interface {
 // TODO:
 // User field has all user information. But some APIs don't need to
 // fetch all user data. improve this
+type DegreeInfo struct {
+	Field string `json:"field"`
+	Entry string `json:"entry"`
+	End   string `json:"end"`
+}
+
 type User struct {
-	UserId   string `json:"_key"`
-	Username string `json:"username"`
-	ImageUrl string `json:"image_url"`
-	Headling string `json:"headling"`
-	Faculty  string `json:"faculty"`
-	Field    string `json:"field"`
-	Batch    string `json:"batch"`
-	About    string `json:"about"`
+	UserId     string     `json:"_key"`
+	Username   string     `json:"username"`
+	ImageUrl   string     `json:"image_url"`
+	Headling   string     `json:"headling"`
+	Faculty    string     `json:"faculty"`
+	DegreeInfo DegreeInfo `json:"degree_info"` // TODO: check this
+	Batch      string     `json:"batch"`
+	About      string     `json:"about"`
 }
 
 type UserRole int
