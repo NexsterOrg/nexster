@@ -43,6 +43,7 @@ func (fr *friendReqCtrler) ListStrings(ctx context.Context, query string, bindVa
 	}
 }
 
+// eg: [ {}, {}, {} ]. Each json has string value.
 func (fr *friendReqCtrler) ListStringValueJson(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
 	results := []*map[string]string{}
 	cursor, err := fr.argClient.Db.Query(ctx, query, bindVars)

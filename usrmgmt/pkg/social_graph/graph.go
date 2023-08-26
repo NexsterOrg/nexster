@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
@@ -63,6 +64,10 @@ const allFriendReqsCountQry string = `FOR doc IN friendRequest
 	COLLECT WITH COUNT INTO len
 	RETURN len`
 
+const friendReqPairQry string = `FOR doc IN friendRequest
+	FILTER doc._key == @friendReqKey
+	RETURN {"from" : doc._from, "to" : doc._to }`
+
 type socialGraph struct {
 	fReqCtrler freq.Interface
 	frndCtrler frnd.Interface
@@ -103,6 +108,7 @@ func (sgr *socialGraph) GetAllFriendReqsCount(ctx context.Context, userKey strin
 // TODO:
 // 1. Need to check the existance of user nodes.
 // 2. req_date should be system generated
+// 3. if from == to then reject creating req link
 func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendKey, mode, state, reqDate string) (map[string]string, error) {
 	results := map[string]string{}
 	reqstorId := fmt.Sprintf("%s/%s", userColl, reqstorKey)
@@ -142,12 +148,50 @@ func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendK
 	return results, nil
 }
 
-func (sgr *socialGraph) RemoveFriendRequest(ctx context.Context, key string) error {
-	return sgr.fReqCtrler.RemoveFriendReqEdge(ctx, key)
+func (sgr *socialGraph) RemoveFriendRequest(ctx context.Context, friendkey, user1Key, user2Key string) error {
+	// 1. Get from, to for that friendKey. check with user1Key and user2Key.
+	// if from, to differ don't delete it. return unAuthorized actions.(new custom error)
+	pair, err := sgr.fReqCtrler.ListStringValueJson(ctx, friendReqPairQry, map[string]interface{}{
+		"friendReqKey": friendkey,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check two ends of edge: friendId=%s: %v", friendkey, err)
+	}
+
+	ln := len(pair)
+	if ln == 0 {
+		// TODO: Return NotFoundError
+		return errs.NewNotFoundError(fmt.Sprintf("no friend req doc found for friendKey=%s", friendkey))
+	}
+	if ln > 1 {
+		return fmt.Errorf("found more than one doc for given key=%s", friendkey)
+	}
+	fromId := (*pair[0])["from"]
+	toId := (*pair[0])["to"]
+	user1Id := sgr.usrCtrler.MkUserDocId(user1Key)
+	user2Id := sgr.usrCtrler.MkUserDocId(user2Key)
+
+	notAuth := true
+	if fromId == user1Id {
+		if toId == user2Id {
+			notAuth = false
+		}
+	}
+	if fromId == user2Id {
+		if toId == user1Id {
+			notAuth = false
+		}
+	}
+	if notAuth {
+		// TODO: Return UnAuthError
+		return errs.NewUnAuthError(fmt.Sprintf("%s, %s users, don't belong to friendKey=%s", user1Key, user2Key, friendkey))
+	}
+	return sgr.fReqCtrler.RemoveFriendReqEdge(ctx, friendkey)
 }
 
 // ISSUES:
 // 1. even if users are not exist it will create the friend link with non-existing node.
+// 2. check is the given friend_req coming from given requestor_id. [HIGH]
 func (sgr *socialGraph) CreateFriend(ctx context.Context, friendReqKey, user1, user2, acceptedAt string) (map[string]string, error) {
 	results := map[string]string{}
 	// remove friend req edges

@@ -31,7 +31,7 @@ type Interface interface {
 }
 
 type FriendRequest struct {
-	Key     string `json:"friendreq_id"`
+	Key     string `json:"friendreq_id"` // BUG
 	From    string `json:"requestor" validate:"required"`
 	To      string `json:"friend" validate:"required"`
 	Mode    string `json:"mode" validate:"required"`
@@ -40,7 +40,7 @@ type FriendRequest struct {
 }
 
 type FriendReqAcceptance struct {
-	User1Key   string `json:"reqstor_id" validate:"required"`
-	User2Key   string `json:"acceptor_id" validate:"required"`
-	AcceptedAt string `json:"accepted_at" validate:"required"`
+	User1Key string `json:"reqstor_id" validate:"required"`
+	// User2Key   string `json:"acceptor_id" validate:"required"`
+	// AcceptedAt string `json:"accepted_at" validate:"required"`
 }
