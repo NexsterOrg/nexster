@@ -107,62 +107,41 @@ func (s *server) GetAllFriendReqsCount(w http.ResponseWriter, r *http.Request, _
 	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
-// TODO: if the link is not created since there is already a link --> return 200
-// if edge is created --> return 201
-func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	results := map[string]string{}
+func (s *server) CreateNewFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]int{},
+	}
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
-		s.logger.Errorf("failed create friend request: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
-		s.sendRespMsg(w, http.StatusUnauthorized, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "unauthorized request",
-			"data":    results,
-		})
+		s.logger.Infof("failed create friend request: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
 
 	data, err := s.readFriendReqJson(r)
 	if err != nil {
-		s.logger.Errorf("failed to read json content in friend req, Error: %v", err)
-		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "request body is in wrong format",
-			"data":    results,
-		})
+		s.logger.Infof("failed to read json content in friend req, Error: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
-		s.logger.Errorf("required fields are not in friend req json content, Error: %v", err)
-		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "required fields are missing in request body",
-			"data":    results,
-		})
+		s.logger.Infof("required fields are not in friend req json content, Error: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
-
-	if s.scGraph.GetRole(jwtUserKey, data.From) != urepo.Owner {
-		s.logger.Error("failed create friend request: unauthorized request")
-		s.sendRespMsg(w, http.StatusUnauthorized, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "unauthorized request",
-			"data":    results,
-		})
+	results, err := s.scGraph.CreateFriendReq(r.Context(), jwtUserKey, data.To, data.Mode, data.State, currentUTCTime())
+	if errs.IsNotEligibleError(err) {
+		s.logger.Infof("failed to create friend req: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
 	}
-
-	results, err = s.scGraph.CreateFriendReq(r.Context(), data.From, data.To, data.Mode, data.State, data.ReqDate)
 	if err != nil {
 		s.logger.Errorf("failed to create friend req edge in db, Error: %v", err)
-		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "failed to create required resources",
-			"data":    results,
-		})
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	s.sendRespMsg(w, http.StatusOK, map[string]string{Date: ""}, map[string]interface{}{
+	s.sendRespDefault(w, http.StatusCreated, map[string]interface{}{
 		"state": success,
 		"data":  results,
 	})
@@ -253,7 +232,7 @@ func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p http
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
-	results, err := s.scGraph.CreateFriend(r.Context(), friendReqId, data.User1Key, jwtUserKey, time.Now().UTC().Format(time.RFC3339))
+	results, err := s.scGraph.CreateFriend(r.Context(), friendReqId, data.User1Key, jwtUserKey, currentUTCTime())
 	if err != nil {
 		s.logger.Errorf("unable to create friend request edge since server failed to create required resources due to %v", err)
 		respBody["message"] = "server failed to create friend link"
@@ -546,4 +525,8 @@ func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map
 	w.WriteHeader(statusCode)
 	resp, _ := json.Marshal(body)
 	w.Write(resp)
+}
+
+func currentUTCTime() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }

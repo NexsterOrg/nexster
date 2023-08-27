@@ -75,7 +75,7 @@ func main() {
 	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 
 	router.GET("/usrmgmt/friend_req", srv.ListFriendReqs)
-	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
+	router.POST("/usrmgmt/friend_req", srv.CreateNewFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
 	router.GET("/usrmgmt/friend_req/count", srv.GetAllFriendReqsCount)
 

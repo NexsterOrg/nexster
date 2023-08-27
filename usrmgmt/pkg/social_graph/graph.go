@@ -123,14 +123,14 @@ func (sgr *socialGraph) CreateFriendReq(ctx context.Context, reqstorKey, friendK
 	}
 	// Return Err, so that upper layer notice as resource not been created
 	if isExist {
-		return results, nil
+		return results, errs.NewNotEligibleError(fmt.Sprintf("friend req already exist for reqstorKey=%s, friendKey=%s", reqstorKey, friendKey))
 	}
 
 	if isExist, err = sgr.frndCtrler.IsFriendEdgeExist(ctx, reqstorId, friendId); err != nil {
 		return results, fmt.Errorf("failed to check the existance of friend edge [from %s, to %s]. Error: %v", reqstorId, friendId, err)
 	}
 	if isExist {
-		return results, nil
+		return results, errs.NewNotEligibleError(fmt.Sprintf("friendship already exist for reqstorKey=%s, friendKey=%s", reqstorKey, friendKey))
 	}
 
 	newFriendReqkey, err := sgr.fReqCtrler.CreateFriendReqEdge(ctx, &freq.FriendRequest{

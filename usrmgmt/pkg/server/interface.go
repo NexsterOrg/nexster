@@ -16,7 +16,7 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type Interface interface {
-	HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	CreateNewFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params)
@@ -32,11 +32,11 @@ type Interface interface {
 
 type FriendRequest struct {
 	Key     string `json:"friendreq_id"` // BUG
-	From    string `json:"requestor" validate:"required"`
+	From    string `json:"requestor"`
 	To      string `json:"friend" validate:"required"`
 	Mode    string `json:"mode" validate:"required"`
 	State   string `json:"state" validate:"required"`
-	ReqDate string `json:"req_date" validate:"required"`
+	ReqDate string `json:"req_date"`
 }
 
 type FriendReqAcceptance struct {
