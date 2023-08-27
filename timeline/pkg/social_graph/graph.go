@@ -29,7 +29,7 @@ const order2FriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	SORT null
 	SORT groups[0].e.started_at
 	RETURN {"key" : key, "username" : groups[0].v.username, "image_url": groups[0].v.image_url, "faculty": groups[0].v.faculty, 
-	"field": groups[0].v.degree_info.field, "batch": groups[0].v.batch }`
+	"field": groups[0].v.field, "batch": groups[0].v.batch }`
 
 const getOrder1FriendsQuery string = `FOR v,e IN 1..1 OUTBOUND
 	@userNode friends
