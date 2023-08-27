@@ -3,6 +3,7 @@ package friendrequest
 import (
 	"context"
 	"fmt"
+	"log"
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/google/uuid"
@@ -18,6 +19,50 @@ var _ Interface = (*friendReqCtrler)(nil)
 
 func NewCtrler(argClient *argdb.Client) *friendReqCtrler {
 	return &friendReqCtrler{argClient: argClient}
+}
+
+// Return list of strings (eg: ["element1", "anotherElem2", "thirdElem3"] ). This will use when Query return value is list of strings.
+func (fr *friendReqCtrler) ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]int, error) {
+	results := []int{}
+	cursor, err := fr.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result int
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, result)
+	}
+}
+
+// eg: [ {}, {}, {} ]. Each json has string value.
+func (fr *friendReqCtrler) ListStringValueJson(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
+	results := []*map[string]string{}
+	cursor, err := fr.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		result := map[string]string{}
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
 }
 
 // TODO:

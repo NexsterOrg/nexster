@@ -3,6 +3,7 @@ package friend
 import (
 	"context"
 	"fmt"
+	"log"
 
 	driver "github.com/arangodb/go-driver"
 
@@ -63,5 +64,26 @@ func (frn *friendCtrler) IsFriendEdgeExist(ctx context.Context, user1, user2 str
 			return false, err
 		}
 		return true, nil
+	}
+}
+
+// count friend edges
+func (frn *friendCtrler) CountFriends(ctx context.Context, query string, bindVars map[string]interface{}) (int, error) {
+	cursor, err := frn.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close()
+
+	for {
+		var count int
+		_, err := cursor.ReadDocument(ctx, &count)
+		if driver.IsNoMoreDocuments(err) {
+			return 0, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		return count, nil
 	}
 }

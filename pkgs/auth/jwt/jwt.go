@@ -140,7 +140,7 @@ func GenJwtToken(issuer, subject string, audience []string) (string, error) {
 			"iss": issuer,
 			"sub": subject,
 			"aud": audience,
-			"exp": time.Now().Add(12 * time.Minute).Unix(), // 12 Min valid time
+			"exp": time.Now().Add(12 * time.Hour).Unix(), // 12hr valid time
 		})
 	signedToken, err := t.SignedString(key)
 	if err != nil {

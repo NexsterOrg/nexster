@@ -66,6 +66,7 @@ func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars ma
 	}
 }
 
+// Return list of strings (eg: ["element1", "anotherElem2", "thirdElem3"] ). This will use when Query return value is list of strings.
 func (uc *userCtrler) ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]*string, error) {
 	results := []*string{}
 	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)

@@ -49,7 +49,7 @@ func main() {
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
-		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production
@@ -69,8 +69,15 @@ func main() {
 	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
 	router.GET("/usrmgmt/set-token/:user_id", srv.SetAuthToken)
 
-	router.POST("/usrmgmt/friend_req", srv.HandleFriendReq)
+	router.GET("/usrmgmt/indexnos/:index_no", srv.GetUserKeyByIndexNo)
+	router.GET("/usrmgmt/users/:user_id", srv.GetProfile)
+
+	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
+
+	router.GET("/usrmgmt/friend_req", srv.ListFriendReqs)
+	router.POST("/usrmgmt/friend_req", srv.CreateNewFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
+	router.GET("/usrmgmt/friend_req/count", srv.GetAllFriendReqsCount)
 
 	// TODO: Need to complete the login handler function
 	router.POST("/usrmgmt/login", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

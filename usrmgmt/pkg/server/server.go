@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	vdtor "github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	jwtPrvdr "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
@@ -42,69 +44,110 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
 	}
 }
 
-func (s *server) HandleFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	results := map[string]string{}
+func (s *server) ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"data":          []map[string]string{},
+		"results_count": 0,
+	}
+
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
-		s.logger.Errorf("failed create friend request: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
-		s.sendRespMsg(w, http.StatusUnauthorized, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "unauthorized request",
-			"data":    results,
-		})
+		s.logger.Infof("failed list friend requests: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+
+	results, err := s.scGraph.ListFriendReqs(r.Context(), jwtUserKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list friend requests: %v: userKey=%s", err, jwtUserKey)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = results
+	respBody["results_count"] = len(results)
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+func (s *server) GetAllFriendReqsCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]int{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Infof("failed to count friend req: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	count, err := s.scGraph.GetAllFriendReqsCount(r.Context(), jwtUserKey)
+	if err != nil {
+		s.logger.Errorf("failed to count all friend requests: %v: userKey=%s", err, jwtUserKey)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]int{"count": count}
+	s.sendRespDefault(w, http.StatusOK, respBody)
+}
+
+func (s *server) CreateNewFriendReq(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]int{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Infof("failed create friend request: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
 
 	data, err := s.readFriendReqJson(r)
 	if err != nil {
-		s.logger.Errorf("failed to read json content in friend req, Error: %v", err)
-		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "request body is in wrong format",
-			"data":    results,
-		})
+		s.logger.Infof("failed to read json content in friend req, Error: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
-		s.logger.Errorf("required fields are not in friend req json content, Error: %v", err)
-		s.sendRespMsg(w, http.StatusBadRequest, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "required fields are missing in request body",
-			"data":    results,
-		})
+		s.logger.Infof("required fields are not in friend req json content, Error: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
-
-	if s.scGraph.GetRole(jwtUserKey, data.From) != urepo.Owner {
-		s.logger.Error("failed create friend request: unauthorized request")
-		s.sendRespMsg(w, http.StatusUnauthorized, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "unauthorized request",
-			"data":    results,
-		})
+	results, err := s.scGraph.CreateFriendReq(r.Context(), jwtUserKey, data.To, data.Mode, data.State, currentUTCTime())
+	if errs.IsNotEligibleError(err) {
+		s.logger.Infof("failed to create friend req: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
 	}
-
-	results, err = s.scGraph.CreateFriendReq(r.Context(), data.From, data.To, data.Mode, data.State, data.ReqDate)
 	if err != nil {
 		s.logger.Errorf("failed to create friend req edge in db, Error: %v", err)
-		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{Date: ""}, map[string]interface{}{
-			"state":   failed,
-			"message": "failed to create required resources",
-			"data":    results,
-		})
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	s.sendRespMsg(w, http.StatusOK, map[string]string{Date: ""}, map[string]interface{}{
+	s.sendRespDefault(w, http.StatusCreated, map[string]interface{}{
 		"state": success,
 		"data":  results,
 	})
 }
 
 func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	headers := map[string]string{
-		Date: "",
-	}
 	respBody := map[string]interface{}{
 		"state": failed,
 		"data":  map[string]string{},
@@ -112,44 +155,46 @@ func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, 
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
 		s.logger.Info("failed remove friend request: unsupported user_key type in JWT token: unauthorized request")
-		respBody["message"] = "unauthorized resource access"
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
-	var requestorId string
-	if requestorId = r.URL.Query().Get("reqstor_id"); requestorId == "" {
+	var otherUserKey string
+	if otherUserKey = r.URL.Query().Get("other_id"); otherUserKey == "" {
 		s.logger.Info("failed to remove friend request: reqstor_id query parameter is empty")
-		respBody["message"] = "missing query parameter"
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
-		return
-	}
-	if s.scGraph.GetRole(jwtUserKey, requestorId) != urepo.Owner {
-		s.logger.Info("failed remove friend request: unauthorized request")
-		respBody["message"] = "unauthorized resource access"
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 	friendReqId := p.ByName("friend_req_id")
 	if friendReqId == "" {
 		s.logger.Info("unable to remove friend request edge since friend_request_id is empty")
-		respBody["message"] = "missing path parameter"
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
-	err := s.scGraph.RemoveFriendRequest(r.Context(), friendReqId)
+	err := s.scGraph.RemoveFriendRequest(r.Context(), friendReqId, jwtUserKey, otherUserKey)
+	if errs.IsUnAuthError(err) {
+		s.logger.Infof("failed remove friend request: %v", err)
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	if errs.IsNotFoundError(err) {
+		s.logger.Infof("failed remove friend request: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
 	if err != nil {
 		s.logger.Errorf("failed to remove friend request edge due to %v", err)
-		respBody["message"] = "failed to remove friend request"
-		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
 	respBody["state"] = success
-	respBody["message"] = "successfully to remove the friend request"
 	respBody["data"] = map[string]string{"friend_req_id": friendReqId}
-	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
-// Create a friendship upon an accept of a friend request
+// Create a friendship upon an accept of a friend request.
+// TODO: This function can refactor.
+// 1. Don't need to bring user2Key since it is in JWT token.
+// 2. AcceptAt timestamp should be system generated.
 func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	headers := map[string]string{
 		ContentType: ApplicationJson_Utf8,
@@ -187,14 +232,7 @@ func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p http
 		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
 		return
 	}
-	// user2Key is the acceptor
-	if s.scGraph.GetRole(jwtUserKey, data.User2Key) != urepo.Owner {
-		s.logger.Info("failed create friendship: unauthorized request")
-		respBody["message"] = "unauthorized resource access"
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
-		return
-	}
-	results, err := s.scGraph.CreateFriend(r.Context(), friendReqId, data.User1Key, data.User2Key, data.AcceptedAt)
+	results, err := s.scGraph.CreateFriend(r.Context(), friendReqId, data.User1Key, jwtUserKey, currentUTCTime())
 	if err != nil {
 		s.logger.Errorf("unable to create friend request edge since server failed to create required resources due to %v", err)
 		respBody["message"] = "server failed to create friend link"
@@ -325,6 +363,76 @@ func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httpro
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
 }
 
+// permission : Both (owner, viewer)
+func (s *server) GetProfile(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userKey := p.ByName("user_id")
+
+	info, err := s.scGraph.GetProfileInfo(r.Context(), userKey)
+	if err != nil {
+		s.logger.Errorf("failed to get profile info: userKey: %s: %v", userKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state": failed,
+			"data":  map[string]string{},
+		})
+		return
+	}
+	s.sendRespMsg(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}, map[string]interface{}{
+		"state": success,
+		"data":  info,
+	})
+}
+
+func (s *server) GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	userKey := p.ByName("user_id")
+	count, err := s.scGraph.CountFriendsV2(r.Context(), userKey)
+	if err != nil {
+		s.logger.Errorf("failed to get friend count: userKey: %s: %v", userKey, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, map[string]string{
+			ContentType: ApplicationJson_Utf8,
+			Date:        "",
+		}, map[string]interface{}{
+			"state": failed,
+			"data":  map[string]string{},
+		})
+		return
+	}
+	s.sendRespMsg(w, http.StatusOK, map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}, map[string]interface{}{
+		"state": success,
+		"data":  map[string]int{"count": count},
+	})
+}
+
+// owner permission
+func (s *server) GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	indexNo := p.ByName("index_no")
+	headers := map[string]string{
+		ContentType: ApplicationJson_Utf8,
+		Date:        "",
+	}
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{"key": ""},
+	}
+	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), indexNo)
+	if err != nil {
+		s.logger.Errorf("failed to get userKey for given indexNo=%s: %v", indexNo, err)
+		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]string{"key": userKey}
+	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	userId := p.ByName("user_id")
@@ -408,4 +516,17 @@ func (s *server) sendRespMsg(w http.ResponseWriter, statusCode int, headers map[
 	w.WriteHeader(statusCode)
 	resp, _ := json.Marshal(body)
 	w.Write(resp)
+}
+
+// similar to `sendRespMsg` but only have predefined headers
+func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {
+	w.Header().Add(ContentType, ApplicationJson_Utf8)
+	w.Header().Add(Date, "")
+	w.WriteHeader(statusCode)
+	resp, _ := json.Marshal(body)
+	w.Write(resp)
+}
+
+func currentUTCTime() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }
