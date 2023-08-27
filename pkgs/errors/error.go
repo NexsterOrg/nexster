@@ -35,3 +35,21 @@ func IsNotFoundError(err error) bool {
 	_, ok := err.(*notFoundError)
 	return ok
 }
+
+// Not Eligible for Resource creation.
+type notEligibleError struct {
+	message string
+}
+
+func NewNotEligibleError(msg string) *notEligibleError {
+	return &notEligibleError{message: msg}
+}
+
+func (e *notEligibleError) Error() string {
+	return e.message
+}
+
+func IsNotEligibleError(err error) bool {
+	_, ok := err.(*notEligibleError)
+	return ok
+}
