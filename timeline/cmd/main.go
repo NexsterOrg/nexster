@@ -51,7 +51,7 @@ func main() {
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFriendClient)
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
