@@ -13,6 +13,7 @@ type Interface interface {
 	CountUsers(ctx context.Context, query string, bindVars map[string]interface{}) (int, error)
 	GetUser(ctx context.Context, key string) (*User, error)
 	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]*string, error)
+	ListUsersAnyJsonValue(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]interface{}, error)
 }
 
 // TODO:

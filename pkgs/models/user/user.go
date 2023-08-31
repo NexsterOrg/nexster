@@ -45,6 +45,7 @@ func (uc *userCtrler) MkUserDocId(key string) string {
 	return fmt.Sprintf("%s/%s", UsersColl, key)
 }
 
+// Return [{}, {}, {}]. json objects can have string type of values for fields.
 func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
 	results := []*map[string]string{}
 	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
@@ -55,6 +56,28 @@ func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars ma
 
 	for {
 		var result map[string]string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
+}
+
+// Return [{}, {}, {}]. json objects can have any type of values for fields.
+func (uc *userCtrler) ListUsersAnyJsonValue(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]interface{}, error) {
+	results := []*map[string]interface{}{}
+	cursor, err := uc.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result map[string]interface{}
 		_, err := cursor.ReadDocument(ctx, &result)
 		if driver.IsNoMoreDocuments(err) {
 			return results, nil
