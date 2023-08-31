@@ -16,4 +16,6 @@ type Interface interface {
 	ListAllMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
 	ListPublicMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
 	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
+	ListFriendSuggsV2(ctx context.Context, userKey, birthday, faculty, gender string, page, pageSize int) ([]*map[string]string, error)
+	AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error)
 }

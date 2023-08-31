@@ -23,6 +23,8 @@ const (
 	defaultDate       string = "2023-01-01T01:00:00.000Z"
 	defaultPageNo     int    = 1
 	defaultPageSize   int    = 10
+	defaultBirthday   string = "2002-01-01"
+	defaultGender     string = "male"
 )
 
 type server struct {
@@ -462,6 +464,62 @@ func (s *server) ListRoleBasedMedia(w http.ResponseWriter, r *http.Request, p ht
 	respBody["state"] = success
 	respBody["results_count"] = resCount
 	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+}
+
+func (s *server) ListFriendSuggestionsV2(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state":         failed,
+		"data":          []map[string]string{},
+		"results_count": 0,
+	}
+	faculty := p.ByName("faculty")
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = defaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if err != nil {
+		pageSize = defaultPageSize
+	}
+	respBody["page"] = pageNo
+	respBody["page_size"] = pageSize
+
+	userKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Warn("failed to list friend suggs: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	birthday := r.URL.Query().Get("birthday")
+	if birthday == "" {
+		birthday = defaultBirthday
+	}
+	gender := r.URL.Query().Get("gender")
+	if gender == "" {
+		gender = defaultGender
+	}
+	friends, err := s.scGraph.ListFriendSuggsV2(r.Context(), userKey, birthday, faculty, gender, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list friend suggs-v2: %v: userKey=%s", err, userKey)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	// Attach Friend State
+	resultCount := 0
+	for _, each := range friends {
+		state, reqId, err := s.scGraph.AttachFriendState(r.Context(), userKey, (*each)["key"])
+		if err != nil {
+			s.logger.Errorf("error found during attaching friend state: %v: userKey=%s, friendKey=%s\n", err, userKey, (*each)["key"])
+			continue
+		}
+		(*each)["friend_state"] = state
+		(*each)["friend_req_id"] = reqId
+		resultCount++
+	}
+	respBody["state"] = success
+	respBody["results_count"] = resultCount
+	respBody["data"] = friends
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
