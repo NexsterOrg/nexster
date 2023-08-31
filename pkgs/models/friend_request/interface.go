@@ -20,6 +20,7 @@ type Interface interface {
 	RemoveFriendReqEdge(ctx context.Context, key string) error
 	ListStringValueJson(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
 	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]int, error)
+	GetFriendReqKey(ctx context.Context, reqstorId, friendId string) (string, error)
 }
 
 type FriendRequest struct {

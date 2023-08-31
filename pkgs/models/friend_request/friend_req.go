@@ -11,6 +11,11 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 )
 
+const getFriendReqKeyQry string = `FOR v,e IN 1..1 OUTBOUND
+	@reqstorNode friendRequest
+	FILTER v._id == @friendNode
+	return e._key`
+
 type friendReqCtrler struct {
 	argClient *argdb.Client
 }
@@ -121,6 +126,24 @@ func (fr *friendReqCtrler) RemoveFriendReqEdge(ctx context.Context, key string) 
 	return err
 }
 
+func (fr *friendReqCtrler) GetFriendReqKey(ctx context.Context, reqstorId, friendId string) (string, error) {
+	fReqKeys, err := fr.listStrings(ctx, getFriendReqKeyQry, map[string]interface{}{
+		"reqstorNode": reqstorId,
+		"friendNode":  friendId,
+	})
+	if err != nil {
+		return "", err
+	}
+	ln := len(fReqKeys)
+	if ln == 0 {
+		return "", nil
+	}
+	if ln > 1 {
+		return "", fmt.Errorf("more than one friend_req keys found")
+	}
+	return *(fReqKeys[0]), nil
+}
+
 func convertBody(doc map[string]interface{}) (map[string]string, error) {
 	newDoc := map[string]string{}
 	for key, val := range doc {
@@ -135,4 +158,25 @@ func convertBody(doc map[string]interface{}) (map[string]string, error) {
 		return newDoc, fmt.Errorf("invalid key field %s", key)
 	}
 	return newDoc, nil
+}
+
+func (fr *friendReqCtrler) listStrings(ctx context.Context, query string, bindVar map[string]interface{}) ([]*string, error) {
+	var results []*string
+	cursor, err := fr.argClient.Db.Query(ctx, query, bindVar)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
 }
