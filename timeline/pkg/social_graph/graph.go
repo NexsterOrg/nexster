@@ -4,10 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 
+	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
+	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
+	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+)
+
+const perMonth float64 = (24 * 30)
+const (
+	male           string = "male"
+	female         string = "female"
+	birthdayLayout string = "2006-01-02" // yy-mm-dd
 )
 
 // TODO
@@ -29,7 +43,7 @@ const order2FriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	SORT null
 	SORT groups[0].e.started_at
 	RETURN {"key" : key, "username" : groups[0].v.username, "image_url": groups[0].v.image_url, "faculty": groups[0].v.faculty, 
-	"field": groups[0].v.degree_info.field, "batch": groups[0].v.batch }`
+	"field": groups[0].v.field, "batch": groups[0].v.batch }`
 
 const getOrder1FriendsQuery string = `FOR v,e IN 1..1 OUTBOUND
 	@userNode friends
@@ -69,19 +83,32 @@ const getUserKey string = `FOR user IN users
 	LIMIT 1
 	RETURN user._key`
 
+// TODO: Add FILTER v._key != userKey
+const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
+	FILTER v._key != @userKey
+	RETURN  { "key": v._key, "username": v.username, "image_url": v.image_url, "batch": v.batch, 
+		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
+
 type socialGraph struct {
-	mediaRepo mrepo.Interface
-	userRepo  urepo.Interface
-	reactRepo rrepo.Interface
+	mediaRepo  mrepo.Interface
+	userRepo   urepo.Interface
+	reactRepo  rrepo.Interface
+	facRepo    fcrepo.Interface
+	fReqCtrler freq.Interface
+	frndCtrler frnd.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface) *socialGraph {
+func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
+	frIntfce freq.Interface, frndIntfce frnd.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo: mIntfce,
-		userRepo:  uIntfce,
-		reactRepo: rIntfce,
+		mediaRepo:  mIntfce,
+		userRepo:   uIntfce,
+		reactRepo:  rIntfce,
+		facRepo:    facIntfce,
+		fReqCtrler: frIntfce,
+		frndCtrler: frndIntfce,
 	}
 }
 
@@ -256,4 +283,165 @@ func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string)
 		return "", fmt.Errorf("indexNo=%s is not unique, array of userkeys exists", indexNo)
 	}
 	return *res[0], err
+}
+
+func (sgr *socialGraph) AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error) {
+	ln, err := sgr.frndCtrler.GetShortestDistance(ctx, sgr.userRepo.MkUserDocId(reqstorKey), sgr.userRepo.MkUserDocId(friendKey))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get shortest distance: %v", err)
+	}
+	if ln == 1 {
+		return "", "", fmt.Errorf("requestor and friend has the same key")
+	}
+	// already a friend
+	if ln == 2 {
+		return frnd.FriendType, "", nil
+	}
+	friendReqKey, err := sgr.fReqCtrler.GetFriendReqKey(ctx, sgr.userRepo.MkUserDocId(reqstorKey), sgr.userRepo.MkUserDocId(friendKey))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to attach friend state between %s and %s", reqstorKey, friendKey)
+	}
+	// pending-requestor friend
+	if friendReqKey != "" {
+		return frnd.PendingReqstorType, friendReqKey, nil
+	}
+
+	friendReqKey, err = sgr.fReqCtrler.GetFriendReqKey(ctx, sgr.userRepo.MkUserDocId(friendKey), sgr.userRepo.MkUserDocId(reqstorKey))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to attach friend state between %s and %s", reqstorKey, friendKey)
+	}
+	// pending-recipient friend
+	if friendReqKey != "" {
+		return frnd.PendingRecipientType, friendReqKey, nil
+	}
+	// not a friend
+	return frnd.NotFriendType, "", nil
+}
+
+// Suggest friends based on the birthday and faculty mapping.
+// TODO: owner can be within the list as well.
+func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday, faculty, gender string, page, pageSize int) ([]*map[string]string, error) {
+	facWithGender, err := sgr.facRepo.GetFaculty(ctx, faculty, gender)
+	if err != nil {
+		return []*map[string]string{}, fmt.Errorf("failed to get faculty info: %v", err)
+	}
+	// prefer gender
+	pfGender := preferGender(gender)
+	pfUsers, err := sgr.userRepo.ListUsersV2(ctx, listUsersBasedOnGenderQry, map[string]interface{}{
+		"genderId": fmt.Sprintf("genders/%s", pfGender),
+		"userKey":  userKey,
+	})
+	if err != nil {
+		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", pfGender, err)
+	}
+	for _, pfUser := range pfUsers {
+		score := sgr.facRepo.GetPriority(strings.ToLower((*pfUser)["faculty"]), pfGender, facWithGender) * ageMatch((*pfUser)["birthday"], birthday, pfGender, gender)
+		(*pfUser)["score"] = strconv.Itoa(score)
+	}
+	sort.Slice(pfUsers, func(i, j int) bool {
+		valI, err := strconv.Atoi((*pfUsers[i])["score"])
+		if err != nil {
+			return false
+		}
+		valJ, err := strconv.Atoi((*pfUsers[j])["score"])
+		if err != nil {
+			return false
+		}
+		return valI > valJ
+	})
+
+	// same gender
+	otherUsers, err := sgr.userRepo.ListUsersV2(ctx, listUsersBasedOnGenderQry, map[string]interface{}{
+		"genderId": fmt.Sprintf("genders/%s", gender),
+		"userKey":  userKey,
+	})
+	if err != nil {
+		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", gender, err)
+	}
+	for _, otherUser := range otherUsers {
+		score := sgr.facRepo.GetPriority(strings.ToLower((*otherUser)["faculty"]), gender, facWithGender) * ageMatch((*otherUser)["birthday"], birthday, gender, gender)
+		(*otherUser)["score"] = strconv.Itoa(score)
+	}
+	sort.Slice(otherUsers, func(i, j int) bool {
+		valI, err := strconv.Atoi((*otherUsers[i])["score"])
+		if err != nil {
+			return false
+		}
+		valJ, err := strconv.Atoi((*otherUsers[j])["score"])
+		if err != nil {
+			return false
+		}
+		return valI > valJ
+	})
+	// 3:1 ratio
+	pfExpCount, otherExpCount := genderBasedCount(pageSize)
+
+	pfResults, pfCount := Split(pfUsers, page, pfExpCount)
+	otherResults, otherCount := Split(otherUsers, page, otherExpCount)
+
+	combinedResult := make([]*map[string]string, pfCount+otherCount)
+	copy(combinedResult, pfResults)
+	copy(combinedResult[pfCount:], otherResults)
+	return combinedResult, nil
+}
+
+// default to male
+func preferGender(gender string) string {
+	if gender == male {
+		return female
+	}
+	return male
+}
+
+// birthday format: yy-mm-dd
+func ageMatch(birthdayUser, birthdayRef, genderUser, genderRef string) int {
+	bdUser, err := time.Parse(birthdayLayout, birthdayUser)
+	if err != nil {
+		log.Println("Error parsing birthdayUser:", err)
+		return 0
+	}
+
+	bdRef, err := time.Parse(birthdayLayout, birthdayRef)
+	if err != nil {
+		log.Println("Error parsing birthdayRef:", err)
+		return 0
+	}
+
+	var diff float64
+	if genderRef == female {
+		diff = bdRef.Sub(bdUser).Hours() / perMonth
+
+	} else if genderRef == male {
+		if genderUser == female {
+			diff = bdUser.Sub(bdRef).Hours() / perMonth
+		} else {
+			diff = bdRef.Sub(bdUser).Hours() / perMonth
+		}
+
+	} else {
+		return 0
+	}
+	if diff < -120 {
+		return 0
+	}
+	return int(diff + 120) // return y = x + (12months*10years)
+}
+
+func genderBasedCount(size int) (prefer int, other int) {
+	// Ratio 3:1
+	prefer = (3 * size) / 4
+	other = size - prefer
+	return
+}
+
+func Split(arr []*map[string]string, offset, count int) ([]*map[string]string, int) {
+	ln := len(arr)
+	end := offset + count
+	if offset >= ln {
+		return []*map[string]string{}, 0
+	}
+	if len(arr) < end {
+		return arr[offset:], ln - offset
+	}
+	return arr[offset:end], count
 }

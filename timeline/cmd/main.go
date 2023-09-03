@@ -11,6 +11,9 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
+	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
+	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
@@ -37,17 +40,26 @@ func main() {
 	argRactCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
 	argMedCollClient := argdb.NewCollClient(ctx, argdbCfg, mrepo.MediaColl)
 	argUsrCollClient := argdb.NewCollClient(ctx, argdbCfg, urepo.UsersColl)
+	argFacCollClient := argdb.NewCollClient(ctx, argdbCfg, fcrepo.FacultyColl)
+	argFrndReqClient := argdb.NewCollClient(ctx, argdbCfg, freq.FriendReqColl)
+	argFriendClient := argdb.NewCollClient(ctx, argdbCfg, frnd.FriendColl)
 
 	mediaRepo := mrepo.NewRepo(argMedCollClient)
 	userRepo := urepo.NewCtrler(argUsrCollClient)
 	reactRepo := rrepo.NewRepo(argRactCollClient)
+	facRepo := fcrepo.NewCtrler(argFacCollClient)
+	frReqCtrler := freq.NewCtrler(argFrndReqClient)
+	frndCtrler := frnd.NewCtrler(argFriendClient)
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo)
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
 	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
+
+	router.GET("/timeline/friend_sugs/v2/:faculty", srv.ListFriendSuggestionsV2)
 	router.GET("/timeline/friend_sugs", srv.ListFriendSuggestions)
+
 	router.GET("/timeline/media", srv.ListOwnersViewMedia)
 	router.GET("/timeline/media/:user_id", srv.ListPublicMedia)
 	router.GET("/timeline/r/media/:img_owner_id", srv.ListRoleBasedMedia) // "/r/*" --> for dynamic role based paths

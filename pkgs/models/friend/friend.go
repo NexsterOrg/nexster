@@ -16,6 +16,9 @@ const friendEdgeExistQuery string = `FOR v,e,p IN 1..1 ANY
 	FILTER e._to == @toUser
 	return e._key`
 
+const getShortestDistanceQry string = `FOR v IN OUTBOUND SHORTEST_PATH 
+	@startNode TO @endNode friends RETURN "1"`
+
 type friendCtrler struct {
 	argClient *argdb.Client
 }
@@ -85,5 +88,34 @@ func (frn *friendCtrler) CountFriends(ctx context.Context, query string, bindVar
 			continue
 		}
 		return count, nil
+	}
+}
+
+func (frn *friendCtrler) GetShortestDistance(ctx context.Context, startNodeKey, endNodeKey string) (int, error) {
+	path, err := frn.listStrings(ctx, getShortestDistanceQry, map[string]interface{}{
+		"startNode": startNodeKey,
+		"endNode":   endNodeKey,
+	})
+	return len(path), err
+}
+
+func (frn *friendCtrler) listStrings(ctx context.Context, query string, bindVar map[string]interface{}) ([]*string, error) {
+	var results []*string
+	cursor, err := frn.argClient.Db.Query(ctx, query, bindVar)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
 	}
 }

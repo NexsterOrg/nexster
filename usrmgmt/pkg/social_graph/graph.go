@@ -56,7 +56,7 @@ const listFriendReqs string = `FOR v,e IN 1..1 INBOUND
 	SORT e.req_date DESC
 	LIMIT @offset, @count
 	RETURN { "user_key": v._key, "username" : v.username, "image_url" : v.image_url, 
-	"batch": v.batch,"faculty": v.faculty, "field" : v.degree_info.field, 
+	"batch": v.batch,"faculty": v.faculty, "field" : v.field, 
 	"req_date": e.req_date, "req_key": e._key }`
 
 const allFriendReqsCountQry string = `FOR doc IN friendRequest
@@ -271,7 +271,7 @@ func (sgr *socialGraph) GetProfileInfo(ctx context.Context, userKey string) (map
 		return map[string]string{}, err
 	}
 	return map[string]string{
-		"key": userKey, "username": info.Username, "faculty": info.Faculty, "field": info.DegreeInfo.Field, "batch": info.Batch,
+		"key": userKey, "username": info.Username, "faculty": info.Faculty, "field": info.Field, "batch": info.Batch,
 		"img_url": info.ImageUrl, "about": info.About,
 	}, nil
 }

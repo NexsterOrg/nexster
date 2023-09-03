@@ -37,16 +37,6 @@ func newClient(cfg *Config) driver.Client {
 	return client
 }
 
-// Create new client to work with db
-func NewDbClient(ctx context.Context, cfg *Config) *Client {
-	client := newClient(cfg)
-	db, err := client.Database(ctx, cfg.Database)
-	if err != nil {
-		panic(err)
-	}
-	return &Client{Db: db}
-}
-
 // Create new client to work with specific collection
 func NewCollClient(ctx context.Context, cfg *Config, collection string) *Client {
 	client := newClient(cfg)
