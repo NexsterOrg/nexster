@@ -20,21 +20,6 @@ const gettFriendReqEdgeQuery string = `FOR v,e IN 1..1 ANY
 	FILTER e.kind == "friend_request" && v._id == @friendNode
 	return e._key`
 
-const listFriends string = `FOR v,e IN 1..1 OUTBOUND
-	@startNode friends
-	OPTIONS { uniqueVertices: "path" }
-	SORT e.started_at DESC
-	LIMIT @offset, @count
-	RETURN {
-		"user_id": v._key,
-		"name": v.username,
-		"from_friend_id": e._key,
-		"to_friend_id": e.other_friend_id,
-		"image_url" : v.image_url,
-		"started_at" : e.started_at,
-		"headling" : v.headling
-	}`
-
 const totalFriends string = `RETURN LENGTH(
 	FOR v IN 1..1 OUTBOUND @startNode friends
 	  OPTIONS { uniqueVertices: "path" }
@@ -243,12 +228,12 @@ func (sgr *socialGraph) RemoveFriend(ctx context.Context, key1, key2 string) err
 	return sgr.frndCtrler.RemoveFriendEdge(ctx, key2)
 }
 
-func (sgr *socialGraph) ListFriends(ctx context.Context, userId string, offset, count int) ([]*map[string]string, error) {
-	return sgr.usrCtrler.ListUsersV2(ctx, listFriends, map[string]interface{}{
-		"startNode": sgr.usrCtrler.MkUserDocId(userId),
-		"offset":    offset,
-		"count":     count,
-	})
+func (sgr *socialGraph) RemoveFriendV2(ctx context.Context, userKey1, userKey2 string) (map[string]string, error) {
+	return sgr.frndCtrler.RemoveFriendship(ctx, sgr.usrCtrler.MkUserDocId(userKey1), sgr.usrCtrler.MkUserDocId(userKey2))
+}
+
+func (sgr *socialGraph) ListFriends(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
+	return sgr.frndCtrler.ListFriends(ctx, sgr.usrCtrler.MkUserDocId(userKey), offset, count)
 }
 
 func (sgr *socialGraph) CountFriends(ctx context.Context, userId string) (int, error) {

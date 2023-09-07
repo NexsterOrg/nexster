@@ -20,6 +20,8 @@ type Interface interface {
 	IsFriendEdgeExist(ctx context.Context, user1, user2 string) (bool, error)
 	CountFriends(ctx context.Context, query string, bindVars map[string]interface{}) (int, error)
 	GetShortestDistance(ctx context.Context, startNodeKey, endNodeKey string) (int, error)
+	ListFriends(ctx context.Context, userId string, offset, count int) ([]*map[string]string, error)
+	RemoveFriendship(ctx context.Context, userId1, userId2 string) (map[string]string, error)
 }
 
 // document format for `friend` edge
