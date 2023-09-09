@@ -15,7 +15,6 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	jwtPrvdr "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
-	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
 
@@ -248,119 +247,74 @@ func (s *server) CreateFriendLink(w http.ResponseWriter, r *http.Request, p http
 
 // TODO: Think whether we need friend_edge ids or id of two users.
 func (s *server) RemoveFriendship(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	headers := map[string]string{
-		ContentType: ApplicationJson_Utf8,
-		Date:        "",
-	}
 	respBody := map[string]interface{}{
 		"state": failed,
 		"data":  map[string]string{},
 	}
-
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
 		s.logger.Info("failed remove friend edge: unsupported user_key type in JWT token: unauthorized request")
-		respBody["message"] = "unauthorized resource access"
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
-
-	userId := r.URL.Query().Get("user_id")
-
-	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
-		s.logger.Info("failed remove friend edge: unauthorized request")
-		respBody["message"] = "unauthorized resource access"
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, respBody)
-		return
-	}
-
 	friendId := p.ByName("friend_id")
 	if friendId == "" {
 		s.logger.Info("failed to remove friend edge: friend_id is empty")
-		respBody["message"] = "friend_id is empty"
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
-
-	toKey := r.URL.Query().Get("to_friend_id")
-	if toKey == "" {
-		s.logger.Info("failed to remove friend edge: To user friend_id is empty")
-		respBody["message"] = "friend_id in query parameter is empty"
-		s.sendRespMsg(w, http.StatusBadRequest, headers, respBody)
+	var result map[string]string
+	var err error
+	if result, err = s.scGraph.RemoveFriendV2(r.Context(), jwtUserKey, friendId); err != nil {
+		s.logger.Errorf("failed to remove friend edge of %s: %v", friendId, err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-
-	if err := s.scGraph.RemoveFriend(r.Context(), friendId, toKey); err != nil {
-		s.logger.Errorf("failed to remove friend edge of %s due to %v", friendId, err)
-		respBody["message"] = "server failed to remove resource"
-		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
-		return
-	}
-
 	respBody["state"] = success
-	respBody["message"] = "successfully resource is removed"
-	// TODO: Need to figure which data will send to front end
-	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+	respBody["data"] = result
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
 func (s *server) ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	headers := map[string]string{
-		ContentType: ApplicationJson_Utf8,
-		Date:        "",
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
 	}
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
 		s.logger.Info("failed list friends: unsupported user_key type in JWT token: unauthorized request")
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, map[string]interface{}{})
-		return
-	}
-	userId := p.ByName("user_id")
-	if s.scGraph.GetRole(jwtUserKey, userId) != urepo.Owner {
-		s.logger.Info("failed list friends: unauthorized request")
-		s.sendRespMsg(w, http.StatusUnauthorized, headers, map[string]interface{}{})
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
 	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil {
-		// s.logger.Warnf("page number not present in URL, therefore default page no = %d will be used", defaultPageNo)
 		pageNo = defaultPageNo
 	}
-
 	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if err != nil {
-		// s.logger.Warnf("page size not present in URL, therefore default page size = %d will be used", defaultPageSize)
 		pageSize = defaultPageSize
 	}
-
-	respBody := map[string]interface{}{
-		"state":         failed,
-		"page":          pageNo,
-		"page_size":     pageSize,
-		"results_count": 0,
-		"total_count":   0,
-		"data":          map[string]string{},
-	}
-	results, err := s.scGraph.ListFriends(r.Context(), userId, (pageNo-1)*pageSize, pageSize)
+	results, err := s.scGraph.ListFriends(r.Context(), jwtUserKey, (pageNo-1)*pageSize, pageSize)
 	if err != nil {
 		s.logger.Errorf("failed to list friends info due to %v", err)
-		respBody["message"] = "server failed to list friends info"
-		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	totalCount, err := s.scGraph.CountFriends(r.Context(), userId)
+	totalCount, err := s.scGraph.CountFriends(r.Context(), jwtUserKey)
 	if err != nil {
 		s.logger.Errorf("failed to count the friends. Err: %v", err)
-		respBody["message"] = "server failed to list friends info"
-		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	resultsCount := len(results)
-	respBody["state"] = success
-	respBody["data"] = results
-	respBody["results_count"] = resultsCount
-	respBody["total_count"] = totalCount
-
-	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+	respBody = map[string]interface{}{
+		"state":         success,
+		"page":          pageNo,
+		"page_size":     pageSize,
+		"results_count": len(results),
+		"total_count":   totalCount,
+		"data":          results,
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
 // permission : Both (owner, viewer)

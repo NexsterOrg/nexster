@@ -66,13 +66,12 @@ func main() {
 		w.Write([]byte("You are in usrmgmt/test page...!"))
 	})
 
-	router.GET("/usrmgmt/friends/:user_id", srv.ListFriendInfo)
+	router.GET("/usrmgmt/all/friends", srv.ListFriendInfo)
+	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 	router.GET("/usrmgmt/set-token/:user_id", srv.SetAuthToken)
 
 	router.GET("/usrmgmt/indexnos/:index_no", srv.GetUserKeyByIndexNo)
 	router.GET("/usrmgmt/users/:user_id", srv.GetProfile)
-
-	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 
 	router.GET("/usrmgmt/friend_req", srv.ListFriendReqs)
 	router.POST("/usrmgmt/friend_req", srv.CreateNewFriendReq)
