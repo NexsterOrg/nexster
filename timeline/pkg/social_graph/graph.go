@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -22,6 +23,12 @@ const (
 	male           string = "male"
 	female         string = "female"
 	birthdayLayout string = "2006-01-02" // yy-mm-dd
+)
+
+// content server namespaces
+const (
+	post   string = "post"
+	avatar string = "avatar"
 )
 
 // TODO
@@ -90,26 +97,36 @@ const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
 
 type socialGraph struct {
-	mediaRepo  mrepo.Interface
-	userRepo   urepo.Interface
-	reactRepo  rrepo.Interface
-	facRepo    fcrepo.Interface
-	fReqCtrler freq.Interface
-	frndCtrler frnd.Interface
+	mediaRepo    mrepo.Interface
+	userRepo     urepo.Interface
+	reactRepo    rrepo.Interface
+	facRepo      fcrepo.Interface
+	fReqCtrler   freq.Interface
+	frndCtrler   frnd.Interface
+	conentClient contapi.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
-	frIntfce freq.Interface, frndIntfce frnd.Interface) *socialGraph {
+	frIntfce freq.Interface, frndIntfce frnd.Interface, contentClient contapi.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo:  mIntfce,
-		userRepo:   uIntfce,
-		reactRepo:  rIntfce,
-		facRepo:    facIntfce,
-		fReqCtrler: frIntfce,
-		frndCtrler: frndIntfce,
+		mediaRepo:    mIntfce,
+		userRepo:     uIntfce,
+		reactRepo:    rIntfce,
+		facRepo:      facIntfce,
+		fReqCtrler:   frIntfce,
+		frndCtrler:   frndIntfce,
+		conentClient: contentClient,
 	}
+}
+
+// move this logic to content server if need. Ideally this should be part of content server.
+func getPermission(ownerKey, viewerKey string) string {
+	if ownerKey == viewerKey {
+		return "owner"
+	}
+	return "viewer"
 }
 
 func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) ([]*map[string]interface{}, error) {
@@ -148,9 +165,22 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 			log.Println(err2)
 			continue
 		}
+		permission := getPermission(user.UserId, userId)
+		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Media.Link, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
+		media.Media.Link = mediaLink
+
+		imgUrl, err := sgr.conentClient.CreateImageUrl(user.ImageUrl, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
 
 		posts = append(posts, &map[string]interface{}{
-			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": user.ImageUrl},
+			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": imgUrl},
 			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
 				"laugh": viewersReacts.Laugh},
 		})
