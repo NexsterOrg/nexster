@@ -22,6 +22,7 @@ import (
 type Configs struct {
 	Server       srv.ServerConfig        `yaml:"server"`
 	AzBlobClient azb.AzBlobClientConfigs `yaml:"azure"`
+	ArgDbCfg     argdb.Config            `yaml:"arangodb"`
 }
 
 func main() {
@@ -37,15 +38,7 @@ func main() {
 	imgBlobClient := blob.NewBlobClient(configs.AzBlobClient.Containers["images"], azBlobClient)
 
 	ctx := context.Background()
-	argdbCfg := &argdb.Config{
-		Hostname: "",
-		Database: "",
-		Username: "",
-		Password: "",
-		Port:     8529,
-	}
-
-	argAvatarCollClient := argdb.NewCollClient(ctx, argdbCfg, avtr.AvatarColl)
+	argAvatarCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, avtr.AvatarColl)
 	avatarCtrler := avtr.NewCtrler(argAvatarCollClient)
 	avatarRepo := avtrrepo.NewRepo(avatarCtrler)
 
