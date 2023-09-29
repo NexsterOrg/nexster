@@ -38,13 +38,13 @@ func New(cfg *ServerConfig, logger *lg.Logger, blClient blclient.Interface, avat
 	}
 }
 
-// imageId + perm + timestamp
+// imageId + perm + ts
 func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	namespace := p.ByName("namespace")
 	blobName := p.ByName("imgId") // image Id (eg: 18733627.png)
 
-	perm := r.URL.Query().Get("perm") // owner | viewer
-	timestamp := r.URL.Query().Get("timestamp")
+	perm := r.URL.Query().Get("perm")    // owner | viewer
+	timestamp := r.URL.Query().Get("ts") // ts - timestamp
 	imgMac := r.URL.Query().Get("imgMac")
 
 	// check whether content is modified or not
@@ -106,7 +106,7 @@ func (s *server) CreateImgMac(w http.ResponseWriter, r *http.Request, p httprout
 		"imgMac": hmac.CalculateHMAC(s.config.SecretImgKey,
 			p.ByName("imgId"),
 			r.URL.Query().Get("perm"),
-			r.URL.Query().Get("timestamp"),
+			r.URL.Query().Get("ts"), // timestamp
 		),
 	})
 }
