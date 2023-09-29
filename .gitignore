@@ -1,2 +1,6 @@
 go.sum
 /configs/auth
+/assets
+/content/configs
+/timeline/configs
+/usrmgmt/configs
