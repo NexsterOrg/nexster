@@ -38,10 +38,10 @@ func main() {
 
 	ctx := context.Background()
 	argdbCfg := &argdb.Config{
-		Hostname: "localhost",
-		Database: "learn_db",
-		Username: "root",
-		Password: "test123",
+		Hostname: "",
+		Database: "",
+		Username: "",
+		Password: "",
 		Port:     8529,
 	}
 
