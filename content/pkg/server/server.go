@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -22,12 +24,23 @@ const (
 	privateView string = "private"
 )
 
+const serverUrl = "http://127.0.0.1:8002"
+
+// query parameters
+const (
+	permission string = "perm"
+	timestamp  string = "ts"
+	imageHMac  string = "imgMac"
+)
+
 type server struct {
 	config     *ServerConfig
 	blobClient blclient.Interface
 	avatarRepo avtr.Interface
 	logger     *lg.Logger
 }
+
+var _ Interface = (*server)(nil)
 
 func New(cfg *ServerConfig, logger *lg.Logger, blClient blclient.Interface, avatarIntfce avtr.Interface) *server {
 	return &server{
@@ -43,12 +56,12 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 	namespace := p.ByName("namespace")
 	blobName := p.ByName("imgId") // image Id (eg: 18733627.png)
 
-	perm := r.URL.Query().Get("perm")    // owner | viewer
-	timestamp := r.URL.Query().Get("ts") // ts - timestamp
-	imgMac := r.URL.Query().Get("imgMac")
+	perm := r.URL.Query().Get(permission) // owner | viewer
+	ts := r.URL.Query().Get(timestamp)    // ts - timestamp
+	imgMac := r.URL.Query().Get(imageHMac)
 
 	// check whether content is modified or not
-	if !hmac.ValidateHMAC(s.config.SecretImgKey, imgMac, blobName, perm, timestamp) {
+	if !hmac.ValidateHMAC(s.config.SecretImgKey, imgMac, blobName, perm, ts) {
 		// return unAuthorized
 		s.logger.Infof("failed to server image: unauthorized access: hmac valdiation failed for blob %s in namespace: %s", blobName, namespace)
 		s.sendRespDefault(w, http.StatusUnauthorized, map[string]interface{}{})
@@ -101,14 +114,21 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 	io.Copy(w, imgReader)
 }
 
-func (s *server) CreateImgMac(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
-		"imgMac": hmac.CalculateHMAC(s.config.SecretImgKey,
+func (s *server) CreateImgUrl(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	namespace := p.ByName("namespace") // eg: avatar, post, poster
+	imgId := p.ByName("imgId")         // eg: 1348502.png
+	rndTimestamp := strconv.Itoa(rand.Intn(10000))
+	imgUrl := fmt.Sprintf("%s/content/images/%s/%s?%s=%s&%s=%s&%s=%s", serverUrl, namespace, imgId,
+		permission, r.URL.Query().Get(permission),
+		timestamp, rndTimestamp,
+		imageHMac, hmac.CalculateHMAC(s.config.SecretImgKey,
 			p.ByName("imgId"),
 			r.URL.Query().Get("perm"),
-			r.URL.Query().Get("ts"), // timestamp
+			rndTimestamp,
 		),
-	})
+	)
+
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"url": imgUrl})
 }
 
 func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {

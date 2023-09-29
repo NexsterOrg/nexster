@@ -18,6 +18,8 @@ type AzBlobClient struct {
 	client *azblob.Client
 }
 
+var _ Interface = (*AzBlobClient)(nil)
+
 func NewAzBlobClient(cfgs *AzBlobClientConfigs) *AzBlobClient {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {

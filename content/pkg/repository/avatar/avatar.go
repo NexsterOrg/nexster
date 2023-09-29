@@ -10,6 +10,8 @@ type avatarRepo struct {
 	ctrler avtr.Interface
 }
 
+var _ Interface = (*avatarRepo)(nil)
+
 func NewRepo(intfce avtr.Interface) *avatarRepo {
 	return &avatarRepo{
 		ctrler: intfce,
