@@ -48,8 +48,8 @@ func main() {
 	csrv := srv.New(&configs.Server, logger, imgBlobClient, avatarRepo)
 
 	router := httprouter.New()
-	router.GET("/content/hmac/image/:imgId", csrv.CreateImgMac)
-	router.GET("/content/images/:namespace/:imgId", csrv.ServeImages)
+	router.GET("/content/hmac/image/:namespace/:imgId", csrv.CreateImgUrl)
+	router.GET("/content/images/:namespace/:imgId", csrv.ServeImages) // this path is use to create the image by CreateImgUrl
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
