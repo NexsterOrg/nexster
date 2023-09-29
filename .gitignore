@@ -1,3 +1,4 @@
 go.sum
 /configs/auth
 /assets
+/content/configs
