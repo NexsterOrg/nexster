@@ -9,16 +9,21 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 )
 
+type AzBlobClientConfigs struct {
+	StorageAccount string            `yaml:"storageAccount"`
+	Containers     map[string]string `yaml:"containers"`
+}
+
 type AzBlobClient struct {
 	client *azblob.Client
 }
 
-func NewAzBlobClient(storageAccount string) *AzBlobClient {
+func NewAzBlobClient(cfgs *AzBlobClientConfigs) *AzBlobClient {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to start azure client: failed to create DefaultAzureCredential: %v", err))
 	}
-	client, err := azblob.NewClient(fmt.Sprintf("https://%s.blob.core.windows.net/", storageAccount), credential, nil)
+	client, err := azblob.NewClient(fmt.Sprintf("https://%s.blob.core.windows.net/", cfgs.StorageAccount), credential, nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to start azure client: %v", err))
 	}

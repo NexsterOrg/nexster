@@ -13,23 +13,9 @@ type blobClient struct {
 	azClient        azblob.Interface
 }
 
-// type blobReader struct{}
-
-// func newBlobReader() *blobReader {
-// 	return &blobReader{}
-// }
-
-// func (br *blobReader) Read(p []byte) (n int, err error){
-// 	return br.Read(p)
-// }
-
-// func (br *blobReader) Close() error {
-// 	return br.Close()
-// }
-
-func NewBlobClient(azContainerName string, azBlobIntfce azblob.Interface) *blobClient {
+func NewBlobClient(container string, azBlobIntfce azblob.Interface) *blobClient {
 	return &blobClient{
-		azContainerName: azContainerName,
+		azContainerName: container,
 		azClient:        azBlobIntfce,
 	}
 }
