@@ -13,6 +13,8 @@ type blobClient struct {
 	azClient        azblob.Interface
 }
 
+var _ Interface = (*blobClient)(nil)
+
 func NewBlobClient(container string, azBlobIntfce azblob.Interface) *blobClient {
 	return &blobClient{
 		azContainerName: container,

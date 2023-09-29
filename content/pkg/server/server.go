@@ -40,6 +40,8 @@ type server struct {
 	logger     *lg.Logger
 }
 
+var _ Interface = (*server)(nil)
+
 func New(cfg *ServerConfig, logger *lg.Logger, blClient blclient.Interface, avatarIntfce avtr.Interface) *server {
 	return &server{
 		config:     cfg,
