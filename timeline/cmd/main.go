@@ -4,10 +4,12 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
 	"github.com/rs/cors"
+	"gopkg.in/yaml.v3"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
@@ -21,28 +23,34 @@ import (
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
 
+type Configs struct {
+	ArgDbCfg argdb.Config `yaml:"arangodb"`
+}
+
 const issuer string = "usrmgmt"
 const asAud string = "timeline"
 
 func main() {
 	ctx := context.Background()
-	argdbCfg := &argdb.Config{
-		Hostname: "--",
-		Database: "--",
-		Username: "--",
-		Password: "--",
-		Port:     8529,
+
+	yamlFile, err := os.ReadFile("../configs/config.yaml")
+	if err != nil {
+		log.Panicf("Error reading YAML file: %v", err)
+	}
+	var configs Configs
+	if err := yaml.Unmarshal(yamlFile, &configs); err != nil {
+		log.Panicf("Error unmarshaling YAML: %v", err)
 	}
 	logger := lg.New("Timeline")
 	logger.EnableColor()
 
 	router := httprouter.New()
-	argRactCollClient := argdb.NewCollClient(ctx, argdbCfg, rrepo.ReactionColl)
-	argMedCollClient := argdb.NewCollClient(ctx, argdbCfg, mrepo.MediaColl)
-	argUsrCollClient := argdb.NewCollClient(ctx, argdbCfg, urepo.UsersColl)
-	argFacCollClient := argdb.NewCollClient(ctx, argdbCfg, fcrepo.FacultyColl)
-	argFrndReqClient := argdb.NewCollClient(ctx, argdbCfg, freq.FriendReqColl)
-	argFriendClient := argdb.NewCollClient(ctx, argdbCfg, frnd.FriendColl)
+	argRactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, rrepo.ReactionColl)
+	argMedCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, mrepo.MediaColl)
+	argUsrCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, urepo.UsersColl)
+	argFacCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fcrepo.FacultyColl)
+	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
+	argFriendClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
 
 	mediaRepo := mrepo.NewRepo(argMedCollClient)
 	userRepo := urepo.NewCtrler(argUsrCollClient)

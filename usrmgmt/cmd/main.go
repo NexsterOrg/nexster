@@ -4,10 +4,12 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
 	"github.com/rs/cors"
+	"gopkg.in/yaml.v3"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
@@ -19,23 +21,29 @@ import (
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
 
+type Configs struct {
+	ArgDbCfg argdb.Config `yaml:"arangodb"`
+}
+
 const issuer string = "usrmgmt"
 
 func main() {
 	ctx := context.Background()
-	argdbCfg := &argdb.Config{
-		Hostname: "",
-		Database: "",
-		Username: "",
-		Password: "",
-		Port:     8529,
+
+	yamlFile, err := os.ReadFile("../configs/config.yaml")
+	if err != nil {
+		log.Panicf("Error reading YAML file: %v", err)
+	}
+	var configs Configs
+	if err := yaml.Unmarshal(yamlFile, &configs); err != nil {
+		log.Panicf("Error unmarshaling YAML: %v", err)
 	}
 	logger := lg.New("UserMgmtSrv")
 	logger.EnableColor()
 
-	argFrndReqClient := argdb.NewCollClient(ctx, argdbCfg, freq.FriendReqColl)
-	argFrndClient := argdb.NewCollClient(ctx, argdbCfg, frnd.FriendColl)
-	argUsrClient := argdb.NewCollClient(ctx, argdbCfg, usr.UsersColl)
+	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
+	argFrndClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
+	argUsrClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, usr.UsersColl)
 
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
