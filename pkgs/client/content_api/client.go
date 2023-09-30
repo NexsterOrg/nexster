@@ -39,3 +39,10 @@ func (ca *conentApiClient) CreateImageUrl(imgIdWithNamespace, permission string)
 	}
 	return data["url"], nil
 }
+
+func (ca *conentApiClient) GetPermission(ownerKey, viewerKey string) string {
+	if ownerKey == viewerKey {
+		return Owner
+	}
+	return Viewer
+}
