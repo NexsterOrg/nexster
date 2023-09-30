@@ -8,4 +8,5 @@ const (
 
 type Interface interface {
 	CreateImageUrl(imgIdWithNamespace, permission string) (string, error)
+	GetPermission(ownerKey, viewerKey string) string
 }
