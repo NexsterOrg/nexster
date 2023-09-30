@@ -86,3 +86,9 @@ func (mr *mediaRepo) ListMediaWithCustomFields(ctx context.Context, query string
 		medias = append(medias, &media)
 	}
 }
+
+func (mr *mediaRepo) Get(ctx context.Context, key string) (*Media, error) {
+	media := &Media{}
+	_, err := mr.argClient.Coll.ReadDocument(ctx, key, media)
+	return media, err
+}

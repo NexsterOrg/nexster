@@ -14,6 +14,7 @@ import (
 
 	blclient "github.com/NamalSanjaya/nexster/content/pkg/client/blob"
 	avtr "github.com/NamalSanjaya/nexster/content/pkg/repository/avatar"
+	mdr "github.com/NamalSanjaya/nexster/content/pkg/repository/media"
 	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
 )
 
@@ -35,17 +36,19 @@ type server struct {
 	config     *ServerConfig
 	blobClient blclient.Interface
 	avatarRepo avtr.Interface
+	mediaRepo  mdr.Interface
 	logger     *lg.Logger
 }
 
 var _ Interface = (*server)(nil)
 
-func New(cfg *ServerConfig, logger *lg.Logger, blClient blclient.Interface, avatarIntfce avtr.Interface) *server {
+func New(cfg *ServerConfig, logger *lg.Logger, blClient blclient.Interface, avatarIntfce avtr.Interface, mediaIntfce mdr.Interface) *server {
 	return &server{
 		config:     cfg,
 		logger:     logger,
 		blobClient: blClient,
 		avatarRepo: avatarIntfce,
+		mediaRepo:  mediaIntfce,
 	}
 }
 
@@ -70,17 +73,16 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 	var err error
 	if namespace == avatarNS {
 		view, err = s.avatarRepo.GetView(r.Context(), getImgKey(blobName))
-		if err != nil {
-			// return server Error
-			s.logger.Errorf("failed to server image: failed to get the view from avatar repo: %v", err)
-			s.sendRespDefault(w, http.StatusInternalServerError, map[string]interface{}{})
-			return
-		}
 	} else if namespace == postNS {
-		// TODO: need to develop
-		return
+		view, err = s.mediaRepo.GetView(r.Context(), getImgKey(blobName))
 	} else {
 		// TODO: need develop
+		return
+	}
+
+	if err != nil {
+		s.logger.Errorf("failed to server image: failed to get the view from %s repo: %v", namespace, err)
+		s.sendRespDefault(w, http.StatusInternalServerError, map[string]interface{}{})
 		return
 	}
 
