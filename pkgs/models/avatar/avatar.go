@@ -11,6 +11,8 @@ type avatarCtrler struct {
 	argClient *argdb.Client
 }
 
+var _ Interface = (*avatarCtrler)(nil)
+
 func NewCtrler(argClient *argdb.Client) *avatarCtrler {
 	return &avatarCtrler{argClient: argClient}
 }

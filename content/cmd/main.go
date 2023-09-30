@@ -13,10 +13,12 @@ import (
 
 	"github.com/NamalSanjaya/nexster/content/pkg/client/blob"
 	avtrrepo "github.com/NamalSanjaya/nexster/content/pkg/repository/avatar"
+	mdrepo "github.com/NamalSanjaya/nexster/content/pkg/repository/media"
 	srv "github.com/NamalSanjaya/nexster/content/pkg/server"
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	azb "github.com/NamalSanjaya/nexster/pkgs/azure/blob_storage"
 	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
+	md "github.com/NamalSanjaya/nexster/pkgs/models/media"
 )
 
 type Configs struct {
@@ -42,14 +44,18 @@ func main() {
 	avatarCtrler := avtr.NewCtrler(argAvatarCollClient)
 	avatarRepo := avtrrepo.NewRepo(avatarCtrler)
 
+	argmediaCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, md.MediaColl)
+	mediaCtrler := md.NewRepo(argmediaCollClient)
+	mediaRepo := mdrepo.NewRepository(mediaCtrler)
+
 	logger := lg.New("Content")
 	logger.EnableColor()
 
-	csrv := srv.New(&configs.Server, logger, imgBlobClient, avatarRepo)
+	csrv := srv.New(&configs.Server, logger, imgBlobClient, avatarRepo, mediaRepo)
 
 	router := httprouter.New()
-	router.GET("/content/hmac/image/:imgId", csrv.CreateImgMac)
-	router.GET("/content/images/:namespace/:imgId", csrv.ServeImages)
+	router.GET("/content/hmac/image/:namespace/:imgId", csrv.CreateImgUrl)
+	router.GET("/content/images/:namespace/:imgId", csrv.ServeImages) // this path is use to create the image by CreateImgUrl
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
