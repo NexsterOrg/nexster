@@ -11,6 +11,7 @@ type Interface interface {
 	ListMedia(ctx context.Context, query string, bindVars map[string]interface{}) ([]*Media, error)
 	ListMediaWithOwner(ctx context.Context, query string, bindVars map[string]interface{}) ([]*MediaWithOwner, error)
 	ListMediaWithCustomFields(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
+	Get(ctx context.Context, key string) (*Media, error)
 }
 
 type Media struct {
@@ -20,6 +21,7 @@ type Media struct {
 	Description string `json:"description"`
 	CreateDate  string `json:"created_date"`
 	Size        int    `json:"size"`
+	Visibility  string `json:"visibility"`
 }
 
 type MediaWithOwner struct {
