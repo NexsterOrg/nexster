@@ -13,6 +13,8 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	cl "github.com/NamalSanjaya/nexster/pkgs/client"
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
@@ -22,7 +24,8 @@ import (
 )
 
 type Configs struct {
-	ArgDbCfg argdb.Config `yaml:"arangodb"`
+	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
+	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
 }
 
 const issuer string = "usrmgmt"
@@ -49,7 +52,10 @@ func main() {
 	frndCtrler := frnd.NewCtrler(argFrndClient)
 	usrCtrler := usr.NewCtrler(argUsrClient)
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler)
+	// API clients
+	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
+
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient)
 	srv := usrv.New(grCtrler, logger)
 
 	router := httprouter.New()

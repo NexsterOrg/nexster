@@ -3,9 +3,11 @@ package socialgraph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -54,27 +56,41 @@ const friendReqPairQry string = `FOR doc IN friendRequest
 	RETURN {"from" : doc._from, "to" : doc._to }`
 
 type socialGraph struct {
-	fReqCtrler freq.Interface
-	frndCtrler frnd.Interface
-	usrCtrler  usr.Interface
+	fReqCtrler   freq.Interface
+	frndCtrler   frnd.Interface
+	usrCtrler    usr.Interface
+	conentClient contapi.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface) *socialGraph {
+func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface) *socialGraph {
 	return &socialGraph{
-		fReqCtrler: frIntfce,
-		frndCtrler: frndIntfce,
-		usrCtrler:  usrIntfce,
+		fReqCtrler:   frIntfce,
+		frndCtrler:   frndIntfce,
+		usrCtrler:    usrIntfce,
+		conentClient: contentIntfce,
 	}
 }
 
 func (sgr *socialGraph) ListFriendReqs(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
-	return sgr.fReqCtrler.ListStringValueJson(ctx, listFriendReqs, map[string]interface{}{
+	friendReqs, err := sgr.fReqCtrler.ListStringValueJson(ctx, listFriendReqs, map[string]interface{}{
 		"userNode": sgr.usrCtrler.MkUserDocId(userKey),
 		"offset":   offset,
 		"count":    count,
 	})
+	if err != nil {
+		return []*map[string]string{}, err
+	}
+	for _, friendReq := range friendReqs {
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*friendReq)["image_url"], contapi.Viewer)
+		if err != nil {
+			log.Println("error when listing friend reqs: failed to create image url", err)
+			continue
+		}
+		(*friendReq)["image_url"] = imgUrl
+	}
+	return friendReqs, nil
 }
 
 func (sgr *socialGraph) GetAllFriendReqsCount(ctx context.Context, userKey string) (int, error) {
@@ -233,7 +249,19 @@ func (sgr *socialGraph) RemoveFriendV2(ctx context.Context, userKey1, userKey2 s
 }
 
 func (sgr *socialGraph) ListFriends(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
-	return sgr.frndCtrler.ListFriends(ctx, sgr.usrCtrler.MkUserDocId(userKey), offset, count)
+	friends, err := sgr.frndCtrler.ListFriends(ctx, sgr.usrCtrler.MkUserDocId(userKey), offset, count)
+	if err != nil {
+		return []*map[string]string{}, err
+	}
+	for _, friend := range friends {
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*friend)["image_url"], contapi.Viewer)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
+		(*friend)["image_url"] = imgUrl
+	}
+	return friends, nil
 }
 
 func (sgr *socialGraph) CountFriends(ctx context.Context, userId string) (int, error) {
@@ -255,9 +283,13 @@ func (sgr *socialGraph) GetProfileInfo(ctx context.Context, userKey string) (map
 	if err != nil {
 		return map[string]string{}, err
 	}
+	imgUrl, err := sgr.conentClient.CreateImageUrl(info.ImageUrl, contapi.Viewer)
+	if err != nil {
+		log.Println("failed to create image url when creating profile info: ", err)
+	}
 	return map[string]string{
 		"key": userKey, "username": info.Username, "faculty": info.Faculty, "field": info.Field, "batch": info.Batch,
-		"img_url": info.ImageUrl, "about": info.About,
+		"img_url": imgUrl, "about": info.About,
 	}, nil
 }
 
