@@ -25,12 +25,6 @@ const (
 	birthdayLayout string = "2006-01-02" // yy-mm-dd
 )
 
-// permission types
-const (
-	owner  string = "owner"
-	viewer string = "viewer"
-)
-
 // TODO
 // 1. Change collection names, field names and other parameter names (eg: friends, mediaOwnerEdges)
 
@@ -121,14 +115,6 @@ func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Int
 	}
 }
 
-// move this logic to content server if need. Ideally this should be part of content server.
-func getPermission(ownerKey, viewerKey string) string {
-	if ownerKey == viewerKey {
-		return owner
-	}
-	return viewer
-}
-
 func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) ([]*map[string]interface{}, error) {
 	posts := []*map[string]interface{}{}
 	bindVars := map[string]interface{}{
@@ -165,7 +151,7 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 			log.Println(err2)
 			continue
 		}
-		permission := getPermission(user.UserId, userId)
+		permission := sgr.conentClient.GetPermission(user.UserId, userId)
 		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Media.Link, permission)
 		if err != nil {
 			log.Println("failed to create post url: ", err)
@@ -210,7 +196,7 @@ func (sgr *socialGraph) ListOwnersPosts(ctx context.Context, userKey, lastPostTi
 			continue
 		}
 
-		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Link, owner)
+		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Link, contapi.Owner)
 		if err != nil {
 			log.Println("failed to create owner post url: ", err)
 			continue
@@ -254,7 +240,7 @@ func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId string
 		}
 		if notFound {
 
-			imgUrl, err := sgr.conentClient.CreateImageUrl((*node2)["image_url"], viewer)
+			imgUrl, err := sgr.conentClient.CreateImageUrl((*node2)["image_url"], contapi.Viewer)
 			if err != nil {
 				log.Println("failed to create url: ", err)
 				continue
@@ -312,7 +298,7 @@ func (sgr *socialGraph) ListAllMedia(ctx context.Context, userKey string, offset
 	}
 
 	for _, media := range medias {
-		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], owner)
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], contapi.Owner)
 		if err != nil {
 			log.Println("failed at owner post listing: failed to create post url: ", err)
 			continue
@@ -333,7 +319,7 @@ func (sgr *socialGraph) ListPublicMedia(ctx context.Context, userKey string, off
 	}
 
 	for _, media := range medias {
-		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], viewer)
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], contapi.Viewer)
 		if err != nil {
 			log.Println("failed at owner post listing: failed to create post url: ", err)
 			continue
@@ -457,7 +443,7 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 
 	// create image urls
 	for _, user := range combinedResult {
-		imgUrl, err := sgr.conentClient.CreateImageUrl((*user)["image_url"], viewer)
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*user)["image_url"], contapi.Viewer)
 		if err != nil {
 			log.Println("failed at friend suggestions: failed to create avatar url: ", err)
 			continue
