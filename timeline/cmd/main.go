@@ -13,6 +13,8 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	cl "github.com/NamalSanjaya/nexster/pkgs/client"
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -24,7 +26,8 @@ import (
 )
 
 type Configs struct {
-	ArgDbCfg argdb.Config `yaml:"arangodb"`
+	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
+	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
 }
 
 const issuer string = "usrmgmt"
@@ -45,6 +48,8 @@ func main() {
 	logger.EnableColor()
 
 	router := httprouter.New()
+
+	// arango db collection clients
 	argRactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, rrepo.ReactionColl)
 	argMedCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, mrepo.MediaColl)
 	argUsrCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, urepo.UsersColl)
@@ -59,7 +64,10 @@ func main() {
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFriendClient)
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler)
+	// API clients
+	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
+
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, contentApiClient)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline

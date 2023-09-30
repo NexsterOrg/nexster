@@ -15,6 +15,7 @@ const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type ServerConfig struct {
 	SecretImgKey string `yaml:"secretImgKey"`
+	Url          string `yaml:"url"`
 }
 
 type Interface interface {

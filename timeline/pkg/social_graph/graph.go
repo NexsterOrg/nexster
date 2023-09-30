@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -22,6 +23,12 @@ const (
 	male           string = "male"
 	female         string = "female"
 	birthdayLayout string = "2006-01-02" // yy-mm-dd
+)
+
+// permission types
+const (
+	owner  string = "owner"
+	viewer string = "viewer"
 )
 
 // TODO
@@ -90,26 +97,36 @@ const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
 
 type socialGraph struct {
-	mediaRepo  mrepo.Interface
-	userRepo   urepo.Interface
-	reactRepo  rrepo.Interface
-	facRepo    fcrepo.Interface
-	fReqCtrler freq.Interface
-	frndCtrler frnd.Interface
+	mediaRepo    mrepo.Interface
+	userRepo     urepo.Interface
+	reactRepo    rrepo.Interface
+	facRepo      fcrepo.Interface
+	fReqCtrler   freq.Interface
+	frndCtrler   frnd.Interface
+	conentClient contapi.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
-	frIntfce freq.Interface, frndIntfce frnd.Interface) *socialGraph {
+	frIntfce freq.Interface, frndIntfce frnd.Interface, contentClient contapi.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo:  mIntfce,
-		userRepo:   uIntfce,
-		reactRepo:  rIntfce,
-		facRepo:    facIntfce,
-		fReqCtrler: frIntfce,
-		frndCtrler: frndIntfce,
+		mediaRepo:    mIntfce,
+		userRepo:     uIntfce,
+		reactRepo:    rIntfce,
+		facRepo:      facIntfce,
+		fReqCtrler:   frIntfce,
+		frndCtrler:   frndIntfce,
+		conentClient: contentClient,
 	}
+}
+
+// move this logic to content server if need. Ideally this should be part of content server.
+func getPermission(ownerKey, viewerKey string) string {
+	if ownerKey == viewerKey {
+		return owner
+	}
+	return viewer
 }
 
 func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) ([]*map[string]interface{}, error) {
@@ -148,9 +165,22 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 			log.Println(err2)
 			continue
 		}
+		permission := getPermission(user.UserId, userId)
+		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Media.Link, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
+		media.Media.Link = mediaLink
+
+		imgUrl, err := sgr.conentClient.CreateImageUrl(user.ImageUrl, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
 
 		posts = append(posts, &map[string]interface{}{
-			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": user.ImageUrl},
+			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": imgUrl},
 			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
 				"laugh": viewersReacts.Laugh},
 		})
@@ -179,6 +209,14 @@ func (sgr *socialGraph) ListOwnersPosts(ctx context.Context, userKey, lastPostTi
 			log.Println(err2)
 			continue
 		}
+
+		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Link, owner)
+		if err != nil {
+			log.Println("failed to create owner post url: ", err)
+			continue
+		}
+		media.Link = mediaLink
+
 		posts = append(posts, &map[string]interface{}{
 			"media":     media,
 			"reactions": racts,
@@ -215,6 +253,14 @@ func (sgr *socialGraph) ListFriendSuggestions(ctx context.Context, userId string
 			}
 		}
 		if notFound {
+
+			imgUrl, err := sgr.conentClient.CreateImageUrl((*node2)["image_url"], viewer)
+			if err != nil {
+				log.Println("failed to create url: ", err)
+				continue
+			}
+			(*node2)["image_url"] = imgUrl
+
 			results = append(results, node2)
 			resultsCount++
 		}
@@ -256,19 +302,45 @@ func (sgr *socialGraph) GetRole(authUserKey, userKey string) urepo.UserRole {
 }
 
 func (sgr *socialGraph) ListAllMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
-	return sgr.mediaRepo.ListMediaWithCustomFields(ctx, getAllMedia, map[string]interface{}{
+	medias, err := sgr.mediaRepo.ListMediaWithCustomFields(ctx, getAllMedia, map[string]interface{}{
 		"userNode": sgr.userRepo.MkUserDocId(userKey),
 		"offset":   offset,
 		"count":    count,
 	})
+	if err != nil {
+		return []*map[string]string{}, err
+	}
+
+	for _, media := range medias {
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], owner)
+		if err != nil {
+			log.Println("failed at owner post listing: failed to create post url: ", err)
+			continue
+		}
+		(*media)["image_url"] = imgUrl
+	}
+	return medias, nil
 }
 
 func (sgr *socialGraph) ListPublicMedia(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
-	return sgr.mediaRepo.ListMediaWithCustomFields(ctx, listPublicMediaQuery, map[string]interface{}{
+	medias, err := sgr.mediaRepo.ListMediaWithCustomFields(ctx, listPublicMediaQuery, map[string]interface{}{
 		"userNode": sgr.userRepo.MkUserDocId(userKey),
 		"offset":   offset,
 		"count":    count,
 	})
+	if err != nil {
+		return []*map[string]string{}, err
+	}
+
+	for _, media := range medias {
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*media)["image_url"], viewer)
+		if err != nil {
+			log.Println("failed at owner post listing: failed to create post url: ", err)
+			continue
+		}
+		(*media)["image_url"] = imgUrl
+	}
+	return medias, nil
 }
 
 func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error) {
@@ -382,6 +454,16 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 	combinedResult := make([]*map[string]string, pfCount+otherCount)
 	copy(combinedResult, pfResults)
 	copy(combinedResult[pfCount:], otherResults)
+
+	// create image urls
+	for _, user := range combinedResult {
+		imgUrl, err := sgr.conentClient.CreateImageUrl((*user)["image_url"], viewer)
+		if err != nil {
+			log.Println("failed at friend suggestions: failed to create avatar url: ", err)
+			continue
+		}
+		(*user)["image_url"] = imgUrl
+	}
 	return combinedResult, nil
 }
 
