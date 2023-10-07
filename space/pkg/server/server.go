@@ -1,0 +1,70 @@
+package server
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+
+	vdtor "github.com/go-playground/validator/v10"
+	"github.com/julienschmidt/httprouter"
+	lg "github.com/labstack/gommon/log"
+
+	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
+	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
+	tp "github.com/NamalSanjaya/nexster/space/pkg/types"
+)
+
+type server struct {
+	logger  *lg.Logger
+	scGraph socigr.Interface
+}
+
+var _ Interface = (*server)(nil)
+
+func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
+	return &server{
+		scGraph: sgrInterface,
+		logger:  logger,
+	}
+}
+
+func (s *server) CreateEventInSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed list events: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	data, err := s.readJsonEventBody(r)
+	if err != nil {
+		s.logger.Errorf("unable to create friend request edge since invalid request body due to %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Errorf("unable to create friend request edge since some mandadary fields are missing in request body due to %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	s.scGraph.CreateEvent(r.Context(), jwtUserKey, nil)
+
+}
+
+func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {
+	data := &tp.Event{}
+	b, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		return data, err
+	}
+	if err = json.Unmarshal(b, &data); err != nil {
+		return data, err
+	}
+	return data, nil
+}
