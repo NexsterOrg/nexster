@@ -38,7 +38,7 @@ func (gr *socialGraph) CreateEvent(ctx context.Context, userKey string, data *tp
 		EventLink:   data.EventLink,
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create event: %s", err)
+		return "", "", err
 	}
 	postedByKey, err := gr.postedByCtrler.CreateDocument(ctx, gr.eventCtrler.MkDocumentId(eventKey), gr.userCtrler.MkUserDocId(userKey), pb.TypeEvent)
 	if err != nil {

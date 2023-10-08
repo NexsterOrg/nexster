@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 )
 
 type postedByCtrler struct {
@@ -23,6 +24,7 @@ func (pb *postedByCtrler) MkDocumentId(key string) string {
 
 func (pb *postedByCtrler) CreateDocument(ctx context.Context, from, to, type1 string) (string, error) {
 	meta, err := pb.argClient.Coll.CreateDocument(ctx, &PostedBy{
+		Key:  uuid.GenUUID4(),
 		From: from,
 		To:   to,
 		Type: type1,

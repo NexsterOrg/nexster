@@ -36,24 +36,34 @@ func (s *server) CreateEventInSpace(w http.ResponseWriter, r *http.Request, p ht
 	}
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
-		s.logger.Info("failed list events: unsupported user_key type in JWT token: unauthorized request")
+		s.logger.Info("failed to create event: unsupported user_key type in JWT token: unauthorized request")
 		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
 		return
 	}
 	data, err := s.readJsonEventBody(r)
 	if err != nil {
-		s.logger.Errorf("unable to create friend request edge since invalid request body due to %v", err)
+		s.logger.Infof("failed to create event: invalid request body: %v", err)
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
-		s.logger.Errorf("unable to create friend request edge since some mandadary fields are missing in request body due to %v", err)
+		s.logger.Infof("failed to create event: some mandadary fields are missing in request body: %v", err)
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
 
-	s.scGraph.CreateEvent(r.Context(), jwtUserKey, nil)
-
+	eventKey, postedByKey, err := s.scGraph.CreateEvent(r.Context(), jwtUserKey, data)
+	if err != nil {
+		s.logger.Errorf("failed to create event: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	respBody["state"] = uh.Success
+	respBody["data"] = map[string]string{
+		"eventKey":    eventKey,
+		"postedByKey": postedByKey,
+	}
+	uh.SendDefaultResp(w, http.StatusCreated, respBody)
 }
 
 func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {
