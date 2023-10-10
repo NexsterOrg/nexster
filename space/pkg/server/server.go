@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	vdtor "github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
@@ -64,6 +65,35 @@ func (s *server) CreateEventInSpace(w http.ResponseWriter, r *http.Request, p ht
 		"postedByKey": postedByKey,
 	}
 	uh.SendDefaultResp(w, http.StatusCreated, respBody)
+}
+
+// Viewer permission
+func (s *server) ListLatestEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  []map[string]string{},
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if err != nil {
+		pageSize = uh.DefaultPageSize
+	}
+	events, err := s.scGraph.ListLatestEvents(r.Context(), (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list latest events: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{
+		"state":        uh.Success,
+		"page":         pageNo,
+		"pageSize":     pageSize,
+		"resultsCount": len(events),
+		"data":         events,
+	})
 }
 
 func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {

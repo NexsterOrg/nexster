@@ -13,6 +13,8 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	cl "github.com/NamalSanjaya/nexster/pkgs/client"
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	ev "github.com/NamalSanjaya/nexster/pkgs/models/event"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
@@ -21,7 +23,8 @@ import (
 )
 
 type Configs struct {
-	ArgDbCfg argdb.Config `yaml:"arangodb"`
+	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
+	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
 }
 
 const issuer string = "usrmgmt"
@@ -52,8 +55,13 @@ func main() {
 	postedByCtrler := pb.NewCtrler(argPostedByCollClient)
 	userCtrler := user.NewCtrler(argUserCollClient)
 
-	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler)
+	// API clients
+	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
+
+	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, contentApiClient)
 	srv := spsrv.New(sociGrphCtrler, logger)
+
+	router.GET("/space/events", srv.ListLatestEventsFromSpace)
 
 	router.POST("/space/events", srv.CreateEventInSpace)
 
