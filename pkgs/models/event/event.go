@@ -3,11 +3,20 @@ package event
 import (
 	"context"
 	"fmt"
+	"log"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	utm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
+	"github.com/arangodb/go-driver"
 )
+
+const listUpcomingByDateQry = `FOR doc IN events
+  FILTER DATE_TIMESTAMP(doc.date) >= DATE_NOW()
+  SORT DATE_TIMESTAMP(doc.date) ASC
+  LIMIT @offset, @count
+  RETURN { "key": doc._key, "link": doc.link, "title": doc.title, "date": doc.date, "description": doc.description, 
+  "venue": doc.venue, "mode": doc.mode, "eventLink": doc.eventLink, "createdAt": doc.createdAt }`
 
 type eventCtrler struct {
 	argClient *argdb.Client
@@ -35,4 +44,33 @@ func (ev *eventCtrler) CreateDocument(ctx context.Context, doc *Event) (string, 
 		return "", fmt.Errorf("failed to create event node: %v", err)
 	}
 	return meta.Key, nil
+}
+
+func (ev *eventCtrler) ListUpcomingsByDate(ctx context.Context, offset, count int) ([]*map[string]string, error) {
+	return ev.listJsonValues(ctx, listUpcomingByDateQry, map[string]interface{}{
+		"offset": offset,
+		"count":  count,
+	})
+}
+
+// Return [{}, {}, {}]. json objects can have string type of values for fields.
+func (ev *eventCtrler) listJsonValues(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
+	results := []*map[string]string{}
+	cursor, err := ev.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result map[string]string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
 }
