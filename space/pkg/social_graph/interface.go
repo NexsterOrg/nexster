@@ -9,5 +9,5 @@ import (
 type Interface interface {
 	// return eventNodeKey, postedByEdgeKey, err
 	CreateEvent(ctx context.Context, userKey string, data *tp.Event) (string, string, error)
-	ListLatestEvents(ctx context.Context, offset, count int) ([]*map[string]string, error)
+	ListUpcomingEvents(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/models/event"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
+	rp "github.com/NamalSanjaya/nexster/space/pkg/repository"
 	tp "github.com/NamalSanjaya/nexster/space/pkg/types"
 )
 
@@ -18,16 +19,19 @@ type socialGraph struct {
 	eventCtrler    event.Interface
 	postedByCtrler pb.Interface
 	conentClient   contapi.Interface
+	repo           rp.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGraph(evIntfce event.Interface, pbIntfce pb.Interface, userIntfce user.Interface, contentClient contapi.Interface) *socialGraph {
+func NewGraph(evIntfce event.Interface, pbIntfce pb.Interface, userIntfce user.Interface, contentClient contapi.Interface,
+	repoIntface rp.Interface) *socialGraph {
 	return &socialGraph{
 		eventCtrler:    evIntfce,
 		postedByCtrler: pbIntfce,
 		userCtrler:     userIntfce,
 		conentClient:   contentClient,
+		repo:           repoIntface,
 	}
 }
 
@@ -55,19 +59,98 @@ func (gr *socialGraph) CreateEvent(ctx context.Context, userKey string, data *tp
 	return eventKey, postedByKey, nil
 }
 
-func (gr *socialGraph) ListLatestEvents(ctx context.Context, offset, count int) ([]*map[string]string, error) {
-	events, err := gr.eventCtrler.ListUpcomingsByDate(ctx, offset, count)
+func (gr *socialGraph) ListUpcomingEvents(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error) {
+	events, err := gr.repo.ListUpcomingEvents(ctx, offset, count)
 	if err != nil {
-		return []*map[string]string{}, fmt.Errorf("falied to list latest events: %v", err)
+		return []*map[string]interface{}{}, fmt.Errorf("falied to list latest events: %v", err)
 	}
+	results := []*map[string]interface{}{}
+
 	for _, event := range events {
-		posterLink, err := gr.conentClient.CreateImageUrl((*event)["link"], contentapi.Viewer)
-		if err != nil {
-			log.Println("list latest events: failed to create event poster url: ", err)
+		eventKey, ok := (*event)["key"].(string)
+		if !ok {
+			log.Printf("[Error]: failed to convert a event key to string: eventKey=%v", (*event)["key"])
 			continue
 		}
-		// If we are failed to create poster link, still we add that to our list.
+
+		// create poster image url
+		imgLink, ok := (*event)["link"].(string)
+		if !ok {
+			log.Printf("[Error]: failed to convert link to string: eventKey=%s", eventKey)
+			continue
+		}
+		posterLink, err := gr.conentClient.CreateImageUrl(imgLink, contentapi.Viewer)
+		if err != nil {
+			log.Printf("[Error]: list latest events: failed to create event poster url: eventKey=%s, %v", eventKey, err)
+		}
+		// if we are failed to create poster link, still we add that to our list.
 		(*event)["link"] = posterLink
+
+		// prepare postedBy field properly
+		postedBy, ok := (*event)["postedBy"].([]interface{})
+		if !ok {
+			log.Printf("[Error]: failed to convert postedBy to []interface{}: eventKey=%s", eventKey)
+			continue
+		}
+		postedByLn := len(postedBy)
+		if postedByLn == 0 {
+			log.Printf("[Error]: no owner existed for the event: eventKey=%s", eventKey)
+			continue
+		}
+		if postedByLn > 1 {
+			log.Printf("[Warn]: more than one owner exist for the event: eventKey=%s", eventKey)
+			continue
+		}
+		(*event)["postedBy"] = postedBy[0].(map[string]interface{})
+
+		// calculate reaction count for "love" and "going"
+		reactionStates, ok := (*event)["reactionStates"].([]interface{})
+		if !ok {
+			log.Printf("[Error]: failed to convert reactionStates to []interface{}: eventKey=%s", eventKey)
+			continue
+		}
+		var goingCount, loveCount int
+		for _, state := range reactionStates {
+			mapState, isMap := state.(map[string]interface{})
+			if !isMap {
+				log.Printf("[Error]: failed to convert a reaction state to map[string]interface{}: eventKey=%s", eventKey)
+				continue
+			}
+			countFloat64, isFloat64 := mapState["count"].(float64)
+			if !isFloat64 {
+				log.Printf("[Error]: failed to convert a reaction state count to float64: eventKey=%s", eventKey)
+				continue
+			}
+			going, isGoingBool := mapState["going"].(bool)
+			if !isGoingBool {
+				log.Printf("[Error]: failed to convert a reaction state going to bool: eventKey=%s", eventKey)
+				continue
+			}
+			love, isLoveBool := mapState["love"].(bool)
+			if !isLoveBool {
+				log.Printf("[Error]: failed to convert a reaction state love to bool: eventKey=%s", eventKey)
+				continue
+			}
+			count := int(countFloat64)
+			if going {
+				goingCount += count
+			}
+			if love {
+				loveCount += count
+			}
+		}
+		(*event)["love"] = loveCount
+		(*event)["going"] = goingCount
+		delete((*event), "reactionStates")
+
+		// Get reaction key. Empty if the key is not existing
+		reactionKey, err := gr.repo.GetEventReactionKey(ctx, userKey, eventKey)
+		if err != nil {
+			reactionKey = "none" // To indicate API user, there is an error while retriving the reactionoKey.
+			log.Printf("[Error]: failed to get reaction key of viewing user: userKey=%s, eventKey=%s", userKey, eventKey)
+		}
+		(*event)["reactionKey"] = reactionKey
+		results = append(results, event)
 	}
-	return events, nil
+	return results, nil
 }
