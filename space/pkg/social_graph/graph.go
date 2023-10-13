@@ -6,7 +6,6 @@ import (
 	"log"
 
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
-	contentapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	"github.com/NamalSanjaya/nexster/pkgs/models/event"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
@@ -79,7 +78,7 @@ func (gr *socialGraph) ListUpcomingEvents(ctx context.Context, userKey string, o
 			log.Printf("[Error]: failed to convert link to string: eventKey=%s", eventKey)
 			continue
 		}
-		posterLink, err := gr.conentClient.CreateImageUrl(imgLink, contentapi.Viewer)
+		posterLink, err := gr.conentClient.CreateImageUrl(imgLink, contapi.Viewer)
 		if err != nil {
 			log.Printf("[Error]: list latest events: failed to create event poster url: eventKey=%s, %v", eventKey, err)
 		}
