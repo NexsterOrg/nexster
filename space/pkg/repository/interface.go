@@ -7,4 +7,5 @@ import (
 type Interface interface {
 	ListUpcomingEvents(ctx context.Context, offset, count int) ([]*map[string]interface{}, error)
 	GetEventReactionKey(ctx context.Context, userKey, eventKey string) (string, error)
+	GetEvent(ctx context.Context, eventKey string) (map[string]interface{}, error)
 }

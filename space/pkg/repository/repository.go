@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	"github.com/NamalSanjaya/nexster/pkgs/models/event"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 )
@@ -47,4 +48,22 @@ func (r *repo) GetEventReactionKey(ctx context.Context, userKey, eventKey string
 		return "", nil
 	}
 	return keys[0], nil
+}
+
+func (r *repo) GetEvent(ctx context.Context, eventKey string) (map[string]interface{}, error) {
+	emptyResult := map[string]interface{}{}
+	event, err := r.db.ListJsonAnyValue(ctx, getEventQry, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+	})
+	if err != nil {
+		return emptyResult, err
+	}
+	ln := len(event)
+	if ln == 0 {
+		return emptyResult, errors.NewNotFoundError("event is not found")
+	}
+	if ln > 1 {
+		return emptyResult, fmt.Errorf("found more than one event nodes for eventKey=%s", eventKey)
+	}
+	return *event[0], nil
 }
