@@ -32,6 +32,10 @@ func (ev *eventCtrler) MkDocumentId(key string) string {
 	return fmt.Sprintf("%s/%s", EventColl, key)
 }
 
+func MkEventDocId(key string) string {
+	return fmt.Sprintf("%s/%s", EventColl, key)
+}
+
 func (ev *eventCtrler) CreateDocument(ctx context.Context, doc *Event) (string, error) {
 	// setting default parameters
 	doc.Key = uuid.GenUUID4()
