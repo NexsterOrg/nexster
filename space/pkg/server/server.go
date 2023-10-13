@@ -68,10 +68,16 @@ func (s *server) CreateEventInSpace(w http.ResponseWriter, r *http.Request, p ht
 }
 
 // Viewer permission
-func (s *server) ListLatestEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *server) ListUpcomingEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{
 		"state": uh.Failed,
 		"data":  []map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to list upcoming events: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
 	}
 	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil {
@@ -81,7 +87,7 @@ func (s *server) ListLatestEventsFromSpace(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		pageSize = uh.DefaultPageSize
 	}
-	events, err := s.scGraph.ListLatestEvents(r.Context(), (pageNo-1)*pageSize, pageSize)
+	events, err := s.scGraph.ListUpcomingEvents(r.Context(), jwtUserKey, (pageNo-1)*pageSize, pageSize)
 	if err != nil {
 		s.logger.Errorf("failed to list latest events: %v", err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)

@@ -18,6 +18,7 @@ import (
 	ev "github.com/NamalSanjaya/nexster/pkgs/models/event"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
+	rp "github.com/NamalSanjaya/nexster/space/pkg/repository"
 	spsrv "github.com/NamalSanjaya/nexster/space/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
 )
@@ -46,6 +47,9 @@ func main() {
 
 	router := httprouter.New()
 
+	// arango db client
+	argdbClient := argdb.NewDbClient(ctx, &configs.ArgDbCfg)
+
 	// arango db collection clients
 	argEventCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, ev.EventColl)
 	argPostedByCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, pb.PostedByColl)
@@ -58,10 +62,13 @@ func main() {
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
-	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, contentApiClient)
+	// repo
+	repo := rp.NewRepo(argdbClient)
+
+	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, contentApiClient, repo)
 	srv := spsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/space/events", srv.ListLatestEventsFromSpace)
+	router.GET("/space/events", srv.ListUpcomingEventsFromSpace)
 
 	router.POST("/space/events", srv.CreateEventInSpace)
 

@@ -8,5 +8,5 @@ import (
 
 type Interface interface {
 	CreateEventInSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params)
-	ListLatestEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	ListUpcomingEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
