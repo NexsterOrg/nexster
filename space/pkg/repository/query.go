@@ -37,3 +37,13 @@ const getEventQry string = `FOR doc IN events
 	)
 	RETURN { "key": doc._key, "link": doc.link, "title": doc.title, "date": doc.date, "description": doc.description, 
 	"venue": doc.venue, "mode": doc.mode, "eventLink": doc.eventLink, "createdAt": doc.createdAt, "postedBy": res1, "reactionStates": res2 }`
+
+const getEventLoveUserQry string = `FOR v, e IN 1..1 INBOUND @eventNode eventReactedBy
+	FILTER e.love
+	LIMIT @offset, @count
+	RETURN { "key": v._key, "username": v.username, "imageUrl": v.image_url, "faculty": v.faculty, 
+		"field": v.field, "batch": v.batch, "indexNo": v.index_no }`
+
+const getOwnerUserKey string = `FOR v IN 1..1 OUTBOUND
+	@eventNode postedBy
+	RETURN v._key`

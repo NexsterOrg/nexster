@@ -67,3 +67,28 @@ func (r *repo) GetEvent(ctx context.Context, eventKey string) (map[string]interf
 	}
 	return *event[0], nil
 }
+
+func (r *repo) ListEventLovers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
+	return r.db.ListJsonAnyValue(ctx, getEventLoveUserQry, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+		"offset":    offset,
+		"count":     count,
+	})
+}
+
+func (r *repo) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {
+	ownerKeys, err := r.db.ListStrings(ctx, getOwnerUserKey, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+	})
+	if err != nil {
+		return "", err
+	}
+	ln := len(ownerKeys)
+	if ln > 1 {
+		return "", fmt.Errorf("more than one owner keys exist: eventKey=%s", eventKey)
+	}
+	if ln == 0 {
+		return "", nil
+	}
+	return ownerKeys[0], nil
+}

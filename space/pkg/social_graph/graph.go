@@ -174,3 +174,35 @@ func (gr *socialGraph) GetEvent(ctx context.Context, userKey, eventKey string) (
 	}
 	return gr.parseEventInfo(ctx, userKey, &event)
 }
+
+func (gr *socialGraph) ListEventLoveUsers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
+	lovers, err := gr.repo.ListEventLovers(ctx, eventKey, offset, count)
+	if err != nil {
+		return []*map[string]interface{}{}, err
+	}
+	for _, lover := range lovers {
+		imgLink, ok := (*lover)["imageUrl"].(string)
+		if !ok {
+			log.Printf("[Error]: failed to convert imageUrl to string: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			continue
+		}
+		imgLink, err = gr.conentClient.CreateImageUrl(imgLink, contapi.Viewer)
+		if err != nil {
+			log.Printf("[Error]: failed to create avatar url: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			continue
+		}
+		(*lover)["imageUrl"] = imgLink
+	}
+	return lovers, nil
+}
+
+func (gr *socialGraph) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {
+	return gr.repo.GetEventOwnerKey(ctx, eventKey)
+}
+
+func (sgr *socialGraph) GetRole(authUserKey, userKey string) user.UserRole {
+	if authUserKey != userKey {
+		return user.Viewer
+	}
+	return user.Owner
+}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
+	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
 	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/space/pkg/types"
@@ -143,4 +144,52 @@ func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {
 		return data, err
 	}
 	return data, nil
+}
+
+// owner permission
+func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  []map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to list love react users: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	eventKey := p.ByName("eventKey")
+	// Get the owner info from DB and verify the permission
+	ownerKey, err := s.scGraph.GetEventOwnerKey(r.Context(), eventKey)
+	if err != nil {
+		s.logger.Errorf("failed to list love react users: failed to get owner key: eventKey=%s, %v", eventKey, err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if s.scGraph.GetRole(jwtUserKey, ownerKey) != user.Owner {
+		s.logger.Info("failed to list love react users: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if err != nil {
+		pageSize = uh.DefaultPageSize
+	}
+	eventLovers, err := s.scGraph.ListEventLoveUsers(r.Context(), eventKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list love react users: eventKey=%s, %v", eventKey, err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{
+		"state":        uh.Success,
+		"page":         pageNo,
+		"pageSize":     pageSize,
+		"resultsCount": len(eventLovers),
+		"data":         eventLovers,
+	})
 }
