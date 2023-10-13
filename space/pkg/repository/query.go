@@ -44,6 +44,12 @@ const getEventLoveUserQry string = `FOR v, e IN 1..1 INBOUND @eventNode eventRea
 	RETURN { "key": v._key, "username": v.username, "imageUrl": v.image_url, "faculty": v.faculty, 
 		"field": v.field, "batch": v.batch, "indexNo": v.index_no }`
 
+const getEventGoingUserQry string = `FOR v, e IN 1..1 INBOUND @eventNode eventReactedBy
+	FILTER e.going
+	LIMIT @offset, @count
+	RETURN { "key": v._key, "username": v.username, "imageUrl": v.image_url, "faculty": v.faculty, 
+		"field": v.field, "batch": v.batch, "indexNo": v.index_no }`
+
 const getOwnerUserKey string = `FOR v IN 1..1 OUTBOUND
 	@eventNode postedBy
 	RETURN v._key`

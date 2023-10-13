@@ -175,25 +175,36 @@ func (gr *socialGraph) GetEvent(ctx context.Context, userKey, eventKey string) (
 	return gr.parseEventInfo(ctx, userKey, &event)
 }
 
-func (gr *socialGraph) ListEventLoveUsers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
-	lovers, err := gr.repo.ListEventLovers(ctx, eventKey, offset, count)
-	if err != nil {
-		return []*map[string]interface{}{}, err
+// typ -> love, going
+func (gr *socialGraph) ListEventReactUsersForType(ctx context.Context, eventKey, typ string, offset, count int) ([]*map[string]interface{}, error) {
+	results := []*map[string]interface{}{}
+	var err error
+	if typ == "love" {
+		results, err = gr.repo.ListEventLovers(ctx, eventKey, offset, count)
+	} else if typ == "going" {
+		results, err = gr.repo.ListEventAttendees(ctx, eventKey, offset, count)
+	} else {
+		return results, fmt.Errorf("invalid type is given for typ parameter")
 	}
-	for _, lover := range lovers {
-		imgLink, ok := (*lover)["imageUrl"].(string)
+
+	if err != nil {
+		return results, err
+	}
+
+	for _, result := range results {
+		imgLink, ok := (*result)["imageUrl"].(string)
 		if !ok {
-			log.Printf("[Error]: failed to convert imageUrl to string: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			log.Printf("[Error]: failed to convert imageUrl to string: eventKey=%s, userKey=%v", eventKey, (*result)["key"])
 			continue
 		}
 		imgLink, err = gr.conentClient.CreateImageUrl(imgLink, contapi.Viewer)
 		if err != nil {
-			log.Printf("[Error]: failed to create avatar url: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			log.Printf("[Error]: failed to create avatar url: eventKey=%s, userKey=%v", eventKey, (*result)["key"])
 			continue
 		}
-		(*lover)["imageUrl"] = imgLink
+		(*result)["imageUrl"] = imgLink
 	}
-	return lovers, nil
+	return results, nil
 }
 
 func (gr *socialGraph) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {

@@ -10,4 +10,5 @@ type Interface interface {
 	GetEvent(ctx context.Context, eventKey string) (map[string]interface{}, error)
 	ListEventLovers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error)
 	GetEventOwnerKey(ctx context.Context, eventKey string) (string, error)
+	ListEventAttendees(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error)
 }

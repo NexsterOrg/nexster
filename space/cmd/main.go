@@ -68,7 +68,7 @@ func main() {
 	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, contentApiClient, repo)
 	srv := spsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/space/events/:eventKey/love", srv.ListLoveReactUsersForEvent)
+	router.GET("/space/events/:eventKey/:reactType", srv.ListLoveReactUsersForEvent)
 	router.GET("/space/events/:eventKey", srv.GetEventFromSpace)
 	router.GET("/space/events", srv.ListUpcomingEventsFromSpace)
 

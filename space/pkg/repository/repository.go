@@ -76,6 +76,14 @@ func (r *repo) ListEventLovers(ctx context.Context, eventKey string, offset, cou
 	})
 }
 
+func (r *repo) ListEventAttendees(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
+	return r.db.ListJsonAnyValue(ctx, getEventGoingUserQry, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+		"offset":    offset,
+		"count":     count,
+	})
+}
+
 func (r *repo) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {
 	ownerKeys, err := r.db.ListStrings(ctx, getOwnerUserKey, map[string]interface{}{
 		"eventNode": event.MkEventDocId(eventKey),

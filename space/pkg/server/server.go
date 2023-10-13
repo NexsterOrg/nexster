@@ -152,9 +152,10 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 		"state": uh.Failed,
 		"data":  []map[string]string{},
 	}
+	reactType := p.ByName("reactType")
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
 	if !ok {
-		s.logger.Info("failed to list love react users: unsupported user_key type in JWT token: unauthorized request")
+		s.logger.Infof("failed to list %s react users: unsupported user_key type in JWT token: unauthorized request", reactType)
 		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
 		return
 	}
@@ -162,12 +163,12 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 	// Get the owner info from DB and verify the permission
 	ownerKey, err := s.scGraph.GetEventOwnerKey(r.Context(), eventKey)
 	if err != nil {
-		s.logger.Errorf("failed to list love react users: failed to get owner key: eventKey=%s, %v", eventKey, err)
+		s.logger.Errorf("failed to list %s react users: failed to get owner key: eventKey=%s, %v", reactType, eventKey, err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
 	if s.scGraph.GetRole(jwtUserKey, ownerKey) != user.Owner {
-		s.logger.Info("failed to list love react users: unauthorized request")
+		s.logger.Infof("failed to list %s react users: unauthorized request", reactType)
 		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
 		return
 	}
@@ -179,9 +180,9 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		pageSize = uh.DefaultPageSize
 	}
-	eventLovers, err := s.scGraph.ListEventLoveUsers(r.Context(), eventKey, (pageNo-1)*pageSize, pageSize)
+	eventLovers, err := s.scGraph.ListEventReactUsersForType(r.Context(), eventKey, reactType, (pageNo-1)*pageSize, pageSize)
 	if err != nil {
-		s.logger.Errorf("failed to list love react users: eventKey=%s, %v", eventKey, err)
+		s.logger.Errorf("failed to list %s react users: eventKey=%s, %v", reactType, eventKey, err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
