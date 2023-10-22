@@ -78,6 +78,8 @@ func main() {
 	router.POST("/space/events/:eventKey/reaction", srv.CreateEventReaction)
 	router.POST("/space/events", srv.CreateEventInSpace)
 
+	router.PUT("/space/events/reactions/:reactionKey/:reactionType/:state", srv.SetEventReactionState)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,

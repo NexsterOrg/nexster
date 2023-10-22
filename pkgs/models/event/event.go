@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/arangodb/go-driver"
+
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	utm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
-	"github.com/arangodb/go-driver"
 )
 
 const listUpcomingByDateQry = `FOR doc IN events

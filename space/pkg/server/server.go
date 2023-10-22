@@ -229,3 +229,40 @@ func (s *server) CreateEventReaction(w http.ResponseWriter, r *http.Request, p h
 		"data":  map[string]string{"key": newEventReactKey},
 	})
 }
+
+func (s *server) SetEventReactionState(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{"state": uh.Failed}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to set event reaction: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	state, err := strconv.ParseBool(p.ByName("state"))
+	if err != nil {
+		s.logger.Infof("failed to set event reaction: failed to convert state to boolean: %s: %v", p.ByName("state"), err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	reactionType := p.ByName("reactionType")
+	if reactionType != "love" && reactionType != "going" {
+		s.logger.Info("failed to set event reaction: unsupported reaction type given")
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = s.scGraph.SetEventReactionState(r.Context(), jwtUserKey, p.ByName("reactionKey"),
+		map[string]bool{reactionType: state}); err != nil {
+		statusCode := http.StatusInternalServerError
+		if errors.IsNotFoundError(err) {
+			statusCode = http.StatusNotFound
+
+		} else if errors.IsUnAuthError(err) {
+			statusCode = http.StatusUnauthorized
+		}
+		s.logger.Infof("failed to set event reaction: userKey=%s, %v", jwtUserKey, err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	respBody["state"] = uh.Success
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}

@@ -16,4 +16,5 @@ type Interface interface {
 	GetEventOwnerKey(ctx context.Context, eventKey string) (string, error)
 	GetRole(authUserKey, userKey string) user.UserRole
 	CreateEventReactionEdge(ctx context.Context, reactorKey, eventKey string, data *tp.EventReaction) (string, error)
+	SetEventReactionState(ctx context.Context, reactorKey, reactionEdgeKey string, data map[string]bool) error
 }

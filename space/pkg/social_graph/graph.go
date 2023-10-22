@@ -243,3 +243,14 @@ func (sgr *socialGraph) CreateEventReactionEdge(ctx context.Context, reactorKey,
 		Going: data.Going,
 	})
 }
+
+func (sgr *socialGraph) SetEventReactionState(ctx context.Context, reactorKey, reactionEdgeKey string, data map[string]bool) error {
+	edgeOwner, err := sgr.reactionCtrler.Get(ctx, reactionEdgeKey)
+	if err != nil {
+		return err
+	}
+	if edgeOwner.From != sgr.userCtrler.MkUserDocId(reactorKey) {
+		return errors.NewUnAuthError("not allowed to access")
+	}
+	return sgr.reactionCtrler.UpdateState(ctx, reactionEdgeKey, data)
+}
