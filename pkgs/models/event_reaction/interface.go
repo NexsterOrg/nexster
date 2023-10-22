@@ -14,6 +14,7 @@ type EventReaction struct {
 	From  string `json:"_from"`
 	To    string `json:"_to"`
 	Key   string `json:"_key"`
+	Type  string `json:"type,omitempty"`
 	Love  bool   `json:"love"`
 	Going bool   `json:"going"`
 }

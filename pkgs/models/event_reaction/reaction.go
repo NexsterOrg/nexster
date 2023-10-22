@@ -38,6 +38,7 @@ func (erc *eventReactionCtrler) Get(ctx context.Context, key string) (*EventReac
 func (erc *eventReactionCtrler) Create(ctx context.Context, data *EventReaction) (string, error) {
 	key := uuid.GenUUID4()
 	data.Key = key
+	data.Type = EventReactionColl
 	_, err := erc.argClient.Coll.CreateDocument(ctx, data)
 	if err != nil {
 		return "", fmt.Errorf("failed to create event reaction link: %v", err)
