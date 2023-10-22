@@ -15,4 +15,5 @@ type Interface interface {
 	ListEventReactUsersForType(ctx context.Context, eventKey, typ string, offset, count int) ([]*map[string]interface{}, error)
 	GetEventOwnerKey(ctx context.Context, eventKey string) (string, error)
 	GetRole(authUserKey, userKey string) user.UserRole
+	CreateEventReactionEdge(ctx context.Context, reactorKey, eventKey string, data *tp.EventReaction) (string, error)
 }

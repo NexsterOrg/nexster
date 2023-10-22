@@ -11,4 +11,5 @@ type Interface interface {
 	ListUpcomingEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetEventFromSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	CreateEventReaction(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }

@@ -194,3 +194,38 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 		"data":         eventLovers,
 	})
 }
+
+func (s *server) CreateEventReaction(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to create event reaction: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	body, err := tp.ReadJsonBody[tp.EventReaction](r)
+	if err != nil {
+		s.logger.Infof("failed to create event reaction: request body is invalid: %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	newEventReactKey, err := s.scGraph.CreateEventReactionEdge(r.Context(), jwtUserKey, p.ByName("eventKey"), body)
+	if err != nil {
+		s.logger.Infof("failed to create event reaction: %v", err)
+		status := http.StatusInternalServerError
+		if errors.IsNotConflictError(err) {
+			status = http.StatusConflict
+		} else if errors.IsNotFoundError(err) {
+			status = http.StatusNotFound
+		}
+		uh.SendDefaultResp(w, status, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusCreated, map[string]interface{}{
+		"state": uh.Success,
+		"data":  map[string]string{"key": newEventReactKey},
+	})
+}

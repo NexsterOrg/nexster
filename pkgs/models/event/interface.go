@@ -16,6 +16,7 @@ type Interface interface {
 	MkDocumentId(key string) string
 	CreateDocument(ctx context.Context, doc *Event) (string, error)
 	ListUpcomingsByDate(ctx context.Context, offset, count int) ([]*map[string]string, error)
+	Get(ctx context.Context, key string) (*Event, error)
 }
 
 type Event struct {

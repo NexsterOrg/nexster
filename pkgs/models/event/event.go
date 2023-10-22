@@ -6,6 +6,7 @@ import (
 	"log"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	utm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 	"github.com/arangodb/go-driver"
@@ -77,4 +78,13 @@ func (ev *eventCtrler) listJsonValues(ctx context.Context, query string, bindVar
 		}
 		results = append(results, &result)
 	}
+}
+
+func (ev *eventCtrler) Get(ctx context.Context, key string) (*Event, error) {
+	event := &Event{}
+	_, err := ev.argClient.Coll.ReadDocument(ctx, key, event)
+	if driver.IsNotFoundGeneral(err) {
+		return nil, errors.NewNotFoundError("document not found")
+	}
+	return event, err
 }

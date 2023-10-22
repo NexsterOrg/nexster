@@ -1,0 +1,18 @@
+package eventreaction
+
+import "context"
+
+const EventReactionColl string = "eventReactedBy"
+
+type Interface interface {
+	Get(ctx context.Context, key string) (*EventReaction, error)
+	Create(ctx context.Context, data *EventReaction) (string, error)
+}
+
+type EventReaction struct {
+	From  string `json:"_from"`
+	To    string `json:"_to"`
+	Key   string `json:"_key"`
+	Love  bool   `json:"love"`
+	Going bool   `json:"going"`
+}
