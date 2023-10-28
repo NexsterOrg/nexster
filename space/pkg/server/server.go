@@ -12,7 +12,6 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
-	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
 	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/space/pkg/types"
@@ -146,32 +145,14 @@ func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {
 	return data, nil
 }
 
-// owner permission
+// viewer permission
 func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{
 		"state": uh.Failed,
 		"data":  []map[string]string{},
 	}
 	reactType := p.ByName("reactType")
-	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
-	if !ok {
-		s.logger.Infof("failed to list %s react users: unsupported user_key type in JWT token: unauthorized request", reactType)
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
 	eventKey := p.ByName("eventKey")
-	// Get the owner info from DB and verify the permission
-	ownerKey, err := s.scGraph.GetEventOwnerKey(r.Context(), eventKey)
-	if err != nil {
-		s.logger.Errorf("failed to list %s react users: failed to get owner key: eventKey=%s, %v", reactType, eventKey, err)
-		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
-		return
-	}
-	if s.scGraph.GetRole(jwtUserKey, ownerKey) != user.Owner {
-		s.logger.Infof("failed to list %s react users: unauthorized request", reactType)
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
 	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil {
 		pageNo = uh.DefaultPageNo
