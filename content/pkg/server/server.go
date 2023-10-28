@@ -19,10 +19,11 @@ import (
 )
 
 const (
-	avatarNS    string = "avatar"
-	postNS      string = "post"
-	publicView  string = "public"
-	privateView string = "private"
+	avatarNS       string = "avatar"
+	postNS         string = "post"
+	eventPostersNs string = "event-posters"
+	publicView     string = "public"
+	privateView    string = "private"
 )
 
 // query parameters
@@ -75,8 +76,11 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 		view, err = s.avatarRepo.GetView(r.Context(), getImgKey(blobName))
 	} else if namespace == postNS {
 		view, err = s.mediaRepo.GetView(r.Context(), getImgKey(blobName))
+	} else if namespace == eventPostersNs {
+		// event posters have public view in the current system.
+		view = publicView
 	} else {
-		// TODO: need develop
+		// TODO: space for futher namespaces
 		return
 	}
 
