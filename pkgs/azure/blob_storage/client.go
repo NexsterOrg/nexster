@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 )
 
 type AzBlobClientConfigs struct {
@@ -39,4 +41,14 @@ func (azbc *AzBlobClient) DownloadBlob(ctx context.Context, container, blob stri
 		return nil, "", err
 	}
 	return get.NewRetryReader(ctx, &azblob.RetryReaderOptions{}), *get.ContentType, nil
+}
+
+func (azbc *AzBlobClient) UploadBuffer(ctx context.Context, containerName, blobName, contentType string, data []byte) error {
+
+	_, err := azbc.client.UploadBuffer(ctx, containerName, blobName, data,
+		&blockblob.UploadBufferOptions{HTTPHeaders: &blob.HTTPHeaders{
+			BlobContentType: to.Ptr(contentType),
+		}})
+
+	return err
 }

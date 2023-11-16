@@ -57,6 +57,8 @@ func main() {
 	router.GET("/content/hmac/image/:namespace/:imgId", csrv.CreateImgUrl)
 	router.GET("/content/images/:namespace/:imgId", csrv.ServeImages) // this path is use to create the image by CreateImgUrl
 
+	router.POST("/content/images/:namespace", csrv.UploadImage)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
@@ -69,3 +71,10 @@ func main() {
 	log.Println("content_server - Listen 8002.....")
 	log.Fatal(http.ListenAndServe(":8002", handler))
 }
+
+/** TODO:
+1. All routes are not protected.
+2. Image serve route should be open route. (can't be protected since it need to access by browser)
+3. Image URL create route, upload image route should be protected.
+
+*/
