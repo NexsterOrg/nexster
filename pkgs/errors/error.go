@@ -53,21 +53,3 @@ func IsNotEligibleError(err error) bool {
 	_, ok := err.(*notEligibleError)
 	return ok
 }
-
-// Resource conflicts.
-type conflictError struct {
-	message string
-}
-
-func NewConflictError(msg string) *conflictError {
-	return &conflictError{message: msg}
-}
-
-func (e *conflictError) Error() string {
-	return e.message
-}
-
-func IsNotConflictError(err error) bool {
-	_, ok := err.(*conflictError)
-	return ok
-}

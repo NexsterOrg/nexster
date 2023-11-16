@@ -45,11 +45,6 @@ func (uc *userCtrler) MkUserDocId(key string) string {
 	return fmt.Sprintf("%s/%s", UsersColl, key)
 }
 
-// To use outside places without User instance
-func MkUserDocId(key string) string {
-	return fmt.Sprintf("%s/%s", UsersColl, key)
-}
-
 // Return [{}, {}, {}]. json objects can have string type of values for fields.
 func (uc *userCtrler) ListUsersV2(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
 	results := []*map[string]string{}

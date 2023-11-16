@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,16 +16,13 @@ import (
 	avtr "github.com/NamalSanjaya/nexster/content/pkg/repository/avatar"
 	mdr "github.com/NamalSanjaya/nexster/content/pkg/repository/media"
 	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
-	chttp "github.com/NamalSanjaya/nexster/pkgs/utill/http" // custom http library
-	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 )
 
 const (
-	avatarNS       string = "avatar"
-	postNS         string = "post"
-	eventPostersNs string = "event-posters"
-	publicView     string = "public"
-	privateView    string = "private"
+	avatarNS    string = "avatar"
+	postNS      string = "post"
+	publicView  string = "public"
+	privateView string = "private"
 )
 
 // query parameters
@@ -79,11 +75,8 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 		view, err = s.avatarRepo.GetView(r.Context(), getImgKey(blobName))
 	} else if namespace == postNS {
 		view, err = s.mediaRepo.GetView(r.Context(), getImgKey(blobName))
-	} else if namespace == eventPostersNs {
-		// event posters have public view in the current system.
-		view = publicView
 	} else {
-		// TODO: space for futher namespaces
+		// TODO: need develop
 		return
 	}
 
@@ -138,45 +131,6 @@ func (s *server) CreateImgUrl(w http.ResponseWriter, r *http.Request, p httprout
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"url": imgUrl})
 }
 
-func (s *server) UploadImage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	defaultBody := map[string]interface{}{
-		"state": chttp.Failed,
-		"data":  map[string]string{},
-	}
-	namespace := p.ByName("namespace")
-	imgType := r.URL.Query().Get("type")
-	if imgType == "" {
-		s.logger.Info("failed to upload image: type query parameter is empty")
-		s.sendRespDefault(w, http.StatusBadRequest, defaultBody)
-		return
-	}
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		s.logger.Errorf("failed to upload image: failed to read request body: %v", err)
-		s.sendRespDefault(w, http.StatusInternalServerError, defaultBody)
-		return
-	}
-
-	imageBytes, err := base64.StdEncoding.DecodeString(string(data))
-	if err != nil {
-		s.logger.Errorf("failed to upload image: decode base64 image to []byte: %v", err)
-		s.sendRespDefault(w, http.StatusBadRequest, defaultBody)
-		return
-	}
-	imgFullname, err := s.blobClient.UploadImage(r.Context(), imgType, imageBytes, &blclient.UploadImageOptions{
-		BlobName: getBlobFullName(namespace, uuid.GenUUID4()),
-	})
-	if err != nil {
-		s.logger.Errorf("failed to upload image: failed to upload image: %v", err)
-		s.sendRespDefault(w, http.StatusInternalServerError, defaultBody)
-		return
-	}
-	s.sendRespDefault(w, http.StatusCreated, map[string]interface{}{
-		"state": chttp.Success,
-		"data":  map[string]string{"imageName": imgFullname},
-	})
-}
-
 func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {
 	w.Header().Add(ContentType, ApplicationJson_Utf8)
 	w.Header().Add(Date, "")
@@ -195,8 +149,4 @@ func getImgKey(input string) string {
 		return ""
 	}
 	return parts[0]
-}
-
-func mkBlobFullName(namespace, imgId, imgType string) string {
-	return fmt.Sprintf("%s/%s.%s", namespace, imgId, imgType)
 }
