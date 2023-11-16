@@ -16,6 +16,7 @@ import (
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	ev "github.com/NamalSanjaya/nexster/pkgs/models/event"
+	erec "github.com/NamalSanjaya/nexster/pkgs/models/event_reaction"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 	rp "github.com/NamalSanjaya/nexster/space/pkg/repository"
@@ -54,10 +55,12 @@ func main() {
 	argEventCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, ev.EventColl)
 	argPostedByCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, pb.PostedByColl)
 	argUserCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, user.UsersColl)
+	argEventReactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, erec.EventReactionColl)
 
 	eventCtrler := ev.NewCtrler(argEventCollClient)
 	postedByCtrler := pb.NewCtrler(argPostedByCollClient)
 	userCtrler := user.NewCtrler(argUserCollClient)
+	eventReactCtrler := erec.NewCtrler(argEventReactCollClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
@@ -65,14 +68,17 @@ func main() {
 	// repo
 	repo := rp.NewRepo(argdbClient)
 
-	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, contentApiClient, repo)
+	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, eventReactCtrler, contentApiClient, repo)
 	srv := spsrv.New(sociGrphCtrler, logger)
 
-	router.GET("/space/events/:eventKey/love", srv.ListLoveReactUsersForEvent)
+	router.GET("/space/events/:eventKey/:reactType", srv.ListLoveReactUsersForEvent)
 	router.GET("/space/events/:eventKey", srv.GetEventFromSpace)
 	router.GET("/space/events", srv.ListUpcomingEventsFromSpace)
 
+	router.POST("/space/events/:eventKey/reaction", srv.CreateEventReaction)
 	router.POST("/space/events", srv.CreateEventInSpace)
+
+	router.PUT("/space/events/reactions/:reactionKey/:reactionType/:state", srv.SetEventReactionState)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},

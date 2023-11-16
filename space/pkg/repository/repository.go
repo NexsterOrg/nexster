@@ -32,22 +32,27 @@ func (r *repo) ListUpcomingEvents(ctx context.Context, offset, count int) ([]*ma
 	})
 }
 
-func (r *repo) GetEventReactionKey(ctx context.Context, userKey, eventKey string) (string, error) {
-	keys, err := r.db.ListStrings(ctx, getEventReactionKeyQry, map[string]interface{}{
+func (r *repo) GetEventReaction(ctx context.Context, userKey, eventKey string) (map[string]interface{}, error) {
+	emptyResult := map[string]interface{}{
+		"key":   "",
+		"love":  false,
+		"going": false,
+	}
+	keys, err := r.db.ListJsonAnyValue(ctx, getEventReactionKeyQry, map[string]interface{}{
 		"userNode":  user.MkUserDocId(userKey),
 		"eventNode": event.MkEventDocId(eventKey),
 	})
 	if err != nil {
-		return "", err
+		return emptyResult, err
 	}
 	ln := len(keys)
 	if ln > 1 {
-		return "", fmt.Errorf("more than one event reaction edges exist from=%s to=%s", userKey, eventKey)
+		return emptyResult, fmt.Errorf("more than one event reaction edges exist from=%s to=%s", userKey, eventKey)
 	}
 	if ln == 0 {
-		return "", nil
+		return emptyResult, nil
 	}
-	return keys[0], nil
+	return *(keys[0]), nil
 }
 
 func (r *repo) GetEvent(ctx context.Context, eventKey string) (map[string]interface{}, error) {
@@ -76,6 +81,14 @@ func (r *repo) ListEventLovers(ctx context.Context, eventKey string, offset, cou
 	})
 }
 
+func (r *repo) ListEventAttendees(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
+	return r.db.ListJsonAnyValue(ctx, getEventGoingUserQry, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+		"offset":    offset,
+		"count":     count,
+	})
+}
+
 func (r *repo) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {
 	ownerKeys, err := r.db.ListStrings(ctx, getOwnerUserKey, map[string]interface{}{
 		"eventNode": event.MkEventDocId(eventKey),
@@ -91,4 +104,22 @@ func (r *repo) GetEventOwnerKey(ctx context.Context, eventKey string) (string, e
 		return "", nil
 	}
 	return ownerKeys[0], nil
+}
+
+func (r *repo) GetKeyOfUserReaction(ctx context.Context, eventKey, userKey string) (string, error) {
+	eventReactEdgeKeys, err := r.db.ListStrings(ctx, getEventEdgeKeyOfUserReaction, map[string]interface{}{
+		"eventNode": event.MkEventDocId(eventKey),
+		"userNode":  user.MkUserDocId(userKey),
+	})
+	if err != nil {
+		return "", err
+	}
+	ln := len(eventReactEdgeKeys)
+	if ln > 1 {
+		return "", fmt.Errorf("more than one event reaction edge keys exist: eventKey=%s, userKey=%s", eventKey, userKey)
+	}
+	if ln == 0 {
+		return "", nil
+	}
+	return eventReactEdgeKeys[0], nil
 }

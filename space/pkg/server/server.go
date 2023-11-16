@@ -12,7 +12,6 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
-	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
 	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/space/pkg/types"
@@ -146,31 +145,14 @@ func (s *server) readJsonEventBody(r *http.Request) (*tp.Event, error) {
 	return data, nil
 }
 
-// owner permission
+// viewer permission
 func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{
 		"state": uh.Failed,
 		"data":  []map[string]string{},
 	}
-	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
-	if !ok {
-		s.logger.Info("failed to list love react users: unsupported user_key type in JWT token: unauthorized request")
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
+	reactType := p.ByName("reactType")
 	eventKey := p.ByName("eventKey")
-	// Get the owner info from DB and verify the permission
-	ownerKey, err := s.scGraph.GetEventOwnerKey(r.Context(), eventKey)
-	if err != nil {
-		s.logger.Errorf("failed to list love react users: failed to get owner key: eventKey=%s, %v", eventKey, err)
-		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
-		return
-	}
-	if s.scGraph.GetRole(jwtUserKey, ownerKey) != user.Owner {
-		s.logger.Info("failed to list love react users: unauthorized request")
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
 	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil {
 		pageNo = uh.DefaultPageNo
@@ -179,9 +161,9 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		pageSize = uh.DefaultPageSize
 	}
-	eventLovers, err := s.scGraph.ListEventLoveUsers(r.Context(), eventKey, (pageNo-1)*pageSize, pageSize)
+	eventLovers, err := s.scGraph.ListEventReactUsersForType(r.Context(), eventKey, reactType, (pageNo-1)*pageSize, pageSize)
 	if err != nil {
-		s.logger.Errorf("failed to list love react users: eventKey=%s, %v", eventKey, err)
+		s.logger.Errorf("failed to list %s react users: eventKey=%s, %v", reactType, eventKey, err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
@@ -192,4 +174,76 @@ func (s *server) ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Reque
 		"resultsCount": len(eventLovers),
 		"data":         eventLovers,
 	})
+}
+
+func (s *server) CreateEventReaction(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to create event reaction: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	body, err := tp.ReadJsonBody[tp.EventReaction](r)
+	if err != nil {
+		s.logger.Infof("failed to create event reaction: request body is invalid: %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	newEventReactKey, err := s.scGraph.CreateEventReactionEdge(r.Context(), jwtUserKey, p.ByName("eventKey"), body)
+	if err != nil {
+		s.logger.Infof("failed to create event reaction: %v", err)
+		status := http.StatusInternalServerError
+		if errors.IsNotConflictError(err) {
+			status = http.StatusConflict
+		} else if errors.IsNotFoundError(err) {
+			status = http.StatusNotFound
+		}
+		uh.SendDefaultResp(w, status, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusCreated, map[string]interface{}{
+		"state": uh.Success,
+		"data":  map[string]string{"key": newEventReactKey},
+	})
+}
+
+func (s *server) SetEventReactionState(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{"state": uh.Failed}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to set event reaction: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	state, err := strconv.ParseBool(p.ByName("state"))
+	if err != nil {
+		s.logger.Infof("failed to set event reaction: failed to convert state to boolean: %s: %v", p.ByName("state"), err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	reactionType := p.ByName("reactionType")
+	if reactionType != "love" && reactionType != "going" {
+		s.logger.Info("failed to set event reaction: unsupported reaction type given")
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = s.scGraph.SetEventReactionState(r.Context(), jwtUserKey, p.ByName("reactionKey"),
+		map[string]bool{reactionType: state}); err != nil {
+		statusCode := http.StatusInternalServerError
+		if errors.IsNotFoundError(err) {
+			statusCode = http.StatusNotFound
+
+		} else if errors.IsUnAuthError(err) {
+			statusCode = http.StatusUnauthorized
+		}
+		s.logger.Infof("failed to set event reaction: userKey=%s, %v", jwtUserKey, err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	respBody["state"] = uh.Success
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }

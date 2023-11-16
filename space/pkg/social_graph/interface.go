@@ -12,7 +12,9 @@ type Interface interface {
 	CreateEvent(ctx context.Context, userKey string, data *tp.Event) (string, string, error)
 	ListUpcomingEvents(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error)
 	GetEvent(ctx context.Context, userKey, eventKey string) (map[string]interface{}, error)
-	ListEventLoveUsers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error)
+	ListEventReactUsersForType(ctx context.Context, eventKey, typ string, offset, count int) ([]*map[string]interface{}, error)
 	GetEventOwnerKey(ctx context.Context, eventKey string) (string, error)
 	GetRole(authUserKey, userKey string) user.UserRole
+	CreateEventReactionEdge(ctx context.Context, reactorKey, eventKey string, data *tp.EventReaction) (string, error)
+	SetEventReactionState(ctx context.Context, reactorKey, reactionEdgeKey string, data map[string]bool) error
 }

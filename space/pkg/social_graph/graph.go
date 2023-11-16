@@ -6,7 +6,9 @@ import (
 	"log"
 
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
+	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	"github.com/NamalSanjaya/nexster/pkgs/models/event"
+	erec "github.com/NamalSanjaya/nexster/pkgs/models/event_reaction"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
 	rp "github.com/NamalSanjaya/nexster/space/pkg/repository"
@@ -14,21 +16,23 @@ import (
 )
 
 type socialGraph struct {
-	userCtrler     user.Interface
 	eventCtrler    event.Interface
 	postedByCtrler pb.Interface
+	userCtrler     user.Interface
+	reactionCtrler erec.Interface
 	conentClient   contapi.Interface
 	repo           rp.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGraph(evIntfce event.Interface, pbIntfce pb.Interface, userIntfce user.Interface, contentClient contapi.Interface,
+func NewGraph(evIntfce event.Interface, pbIntfce pb.Interface, userIntfce user.Interface, rectIntfce erec.Interface, contentClient contapi.Interface,
 	repoIntface rp.Interface) *socialGraph {
 	return &socialGraph{
 		eventCtrler:    evIntfce,
 		postedByCtrler: pbIntfce,
 		userCtrler:     userIntfce,
+		reactionCtrler: rectIntfce,
 		conentClient:   contentClient,
 		repo:           repoIntface,
 	}
@@ -158,12 +162,11 @@ func (gr *socialGraph) parseEventInfo(ctx context.Context, userKey string, event
 	delete((*event), "reactionStates")
 
 	// Get reaction key. Empty if the key is not existing
-	reactionKey, err := gr.repo.GetEventReactionKey(ctx, userKey, eventKey)
+	reaction, err := gr.repo.GetEventReaction(ctx, userKey, eventKey)
 	if err != nil {
-		reactionKey = "none" // To indicate API user, there is an error while retriving the reactionoKey.
 		log.Printf("[Error]: failed to get reaction key of viewing user: userKey=%s, eventKey=%s", userKey, eventKey)
 	}
-	(*event)["reactionKey"] = reactionKey
+	(*event)["reaction"] = reaction
 	return *event, nil
 }
 
@@ -175,25 +178,36 @@ func (gr *socialGraph) GetEvent(ctx context.Context, userKey, eventKey string) (
 	return gr.parseEventInfo(ctx, userKey, &event)
 }
 
-func (gr *socialGraph) ListEventLoveUsers(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error) {
-	lovers, err := gr.repo.ListEventLovers(ctx, eventKey, offset, count)
-	if err != nil {
-		return []*map[string]interface{}{}, err
+// typ -> love, going
+func (gr *socialGraph) ListEventReactUsersForType(ctx context.Context, eventKey, typ string, offset, count int) ([]*map[string]interface{}, error) {
+	results := []*map[string]interface{}{}
+	var err error
+	if typ == "love" {
+		results, err = gr.repo.ListEventLovers(ctx, eventKey, offset, count)
+	} else if typ == "going" {
+		results, err = gr.repo.ListEventAttendees(ctx, eventKey, offset, count)
+	} else {
+		return results, fmt.Errorf("invalid type is given for typ parameter")
 	}
-	for _, lover := range lovers {
-		imgLink, ok := (*lover)["imageUrl"].(string)
+
+	if err != nil {
+		return results, err
+	}
+
+	for _, result := range results {
+		imgLink, ok := (*result)["imageUrl"].(string)
 		if !ok {
-			log.Printf("[Error]: failed to convert imageUrl to string: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			log.Printf("[Error]: failed to convert imageUrl to string: eventKey=%s, userKey=%v", eventKey, (*result)["key"])
 			continue
 		}
 		imgLink, err = gr.conentClient.CreateImageUrl(imgLink, contapi.Viewer)
 		if err != nil {
-			log.Printf("[Error]: failed to create avatar url: eventKey=%s, userKey=%v", eventKey, (*lover)["key"])
+			log.Printf("[Error]: failed to create avatar url: eventKey=%s, userKey=%v", eventKey, (*result)["key"])
 			continue
 		}
-		(*lover)["imageUrl"] = imgLink
+		(*result)["imageUrl"] = imgLink
 	}
-	return lovers, nil
+	return results, nil
 }
 
 func (gr *socialGraph) GetEventOwnerKey(ctx context.Context, eventKey string) (string, error) {
@@ -205,4 +219,38 @@ func (sgr *socialGraph) GetRole(authUserKey, userKey string) user.UserRole {
 		return user.Viewer
 	}
 	return user.Owner
+}
+
+func (sgr *socialGraph) CreateEventReactionEdge(ctx context.Context, reactorKey, eventKey string, data *tp.EventReaction) (string, error) {
+	// check the event exist
+	_, err := sgr.eventCtrler.Get(ctx, eventKey)
+	if err != nil {
+		return "", err
+	}
+	// check any existing event reaction edge
+	curReactKey, err := sgr.repo.GetKeyOfUserReaction(ctx, eventKey, reactorKey)
+	if err != nil {
+		return "", err
+	}
+	// event reaction edge already exists
+	if curReactKey != "" {
+		return "", errors.NewConflictError("event reaction edge already exists")
+	}
+	return sgr.reactionCtrler.Create(ctx, &erec.EventReaction{
+		From:  sgr.userCtrler.MkUserDocId(reactorKey),
+		To:    sgr.eventCtrler.MkDocumentId(eventKey),
+		Love:  data.Love,
+		Going: data.Going,
+	})
+}
+
+func (sgr *socialGraph) SetEventReactionState(ctx context.Context, reactorKey, reactionEdgeKey string, data map[string]bool) error {
+	edgeOwner, err := sgr.reactionCtrler.Get(ctx, reactionEdgeKey)
+	if err != nil {
+		return err
+	}
+	if edgeOwner.From != sgr.userCtrler.MkUserDocId(reactorKey) {
+		return errors.NewUnAuthError("not allowed to access")
+	}
+	return sgr.reactionCtrler.UpdateState(ctx, reactionEdgeKey, data)
 }

@@ -20,7 +20,7 @@ const upcomingEventsQry string = `FOR doc IN events
 
 const getEventReactionKeyQry string = `FOR v, e IN 1..1 OUTBOUND @userNode eventReactedBy
 	FILTER v._id == @eventNode
-	RETURN e._key`
+	RETURN { "key": e._key, "love": e.love, "going": e.going }`
 
 const getEventQry string = `FOR doc IN events
 	FILTER doc._id == @eventNode
@@ -44,6 +44,16 @@ const getEventLoveUserQry string = `FOR v, e IN 1..1 INBOUND @eventNode eventRea
 	RETURN { "key": v._key, "username": v.username, "imageUrl": v.image_url, "faculty": v.faculty, 
 		"field": v.field, "batch": v.batch, "indexNo": v.index_no }`
 
+const getEventGoingUserQry string = `FOR v, e IN 1..1 INBOUND @eventNode eventReactedBy
+	FILTER e.going
+	LIMIT @offset, @count
+	RETURN { "key": v._key, "username": v.username, "imageUrl": v.image_url, "faculty": v.faculty, 
+		"field": v.field, "batch": v.batch, "indexNo": v.index_no }`
+
 const getOwnerUserKey string = `FOR v IN 1..1 OUTBOUND
 	@eventNode postedBy
 	RETURN v._key`
+
+const getEventEdgeKeyOfUserReaction string = `FOR v, e IN 1..1 INBOUND @eventNode eventReactedBy
+	FILTER v._id == @userNode
+	RETURN e._key`

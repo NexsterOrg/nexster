@@ -8,4 +8,9 @@ import (
 
 type Interface interface {
 	ImageReader(ctx context.Context, blobName string) (*blb.RetryReader, string, error)
+	UploadImage(ctx context.Context, typeName string, data []byte, options *UploadImageOptions) (string, error)
+}
+
+type UploadImageOptions struct {
+	BlobName string
 }
