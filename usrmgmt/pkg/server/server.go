@@ -28,6 +28,8 @@ const (
 // Auth Provider Related Configs
 const authProvider string = "usrmgmt"
 const timeline string = "timeline"
+const spaceAsAud string = "space"
+const imageAsAud string = "image"
 
 type server struct {
 	scGraph socigr.Interface
@@ -396,7 +398,7 @@ func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprout
 		s.logger.Error("falied to Set-cookie: user_id is missing")
 		return
 	}
-	aud := []string{authProvider, timeline}
+	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud}
 	token, err := jwtPrvdr.GenJwtToken(authProvider, userId, aud)
 
 	if err != nil {
