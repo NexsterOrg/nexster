@@ -30,7 +30,7 @@ type Configs struct {
 }
 
 const issuer string = "usrmgmt"
-const asAud string = "timeline"
+const asAud string = "space"
 
 func main() {
 	ctx := context.Background()
@@ -70,6 +70,11 @@ func main() {
 
 	sociGrphCtrler := socigr.NewGraph(eventCtrler, postedByCtrler, userCtrler, eventReactCtrler, contentApiClient, repo)
 	srv := spsrv.New(sociGrphCtrler, logger)
+
+	router.GET("/space/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("You just called to space/test endpoint...!"))
+	})
 
 	router.GET("/space/events/:eventKey/:reactType", srv.ListLoveReactUsersForEvent)
 	router.GET("/space/events/:eventKey", srv.GetEventFromSpace)
