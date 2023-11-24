@@ -59,6 +59,8 @@ func main() {
 
 	router.POST("/content/images/:namespace", csrv.UploadImage)
 
+	router.PUT("/content/images/:namespace/:imgId", csrv.ReplaceImage)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
@@ -75,6 +77,6 @@ func main() {
 /** TODO:
 1. All routes are not protected.
 2. Image serve route should be open route. (can't be protected since it need to access by browser)
-3. Image URL create route, upload image route should be protected.
-
+3. Image URL create route, upload image, Replace image route should be protected.
+issue: https://github.com/NamalSanjaya/nexster-rnd/issues/18
 */

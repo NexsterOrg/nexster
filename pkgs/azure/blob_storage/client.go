@@ -52,3 +52,8 @@ func (azbc *AzBlobClient) UploadBuffer(ctx context.Context, containerName, blobN
 
 	return err
 }
+
+func (azbc *AzBlobClient) DeleteBlob(ctx context.Context, containerName, blobName string) error {
+	_, err := azbc.client.DeleteBlob(ctx, containerName, blobName, nil)
+	return err
+}

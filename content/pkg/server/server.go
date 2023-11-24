@@ -178,6 +178,54 @@ func (s *server) UploadImage(w http.ResponseWriter, r *http.Request, p httproute
 	})
 }
 
+// permission = owner (need to implement)
+func (s *server) ReplaceImage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	defaultBody := map[string]interface{}{
+		"state": chttp.Failed,
+		"data":  map[string]string{},
+	}
+	namespace := p.ByName("namespace")   // eg: post
+	imageId := p.ByName("imgId")         // eg: 18349583.png
+	imgType := r.URL.Query().Get("type") // eg: jpg | png | jpeg
+	if imgType == "" {
+		s.logger.Info("failed to replace image: type query parameter is empty")
+		s.sendRespDefault(w, http.StatusBadRequest, defaultBody)
+		return
+	}
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		s.logger.Errorf("failed to replace image: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, defaultBody)
+		return
+	}
+
+	imageBytes, err := base64.StdEncoding.DecodeString(string(data))
+	if err != nil {
+		s.logger.Errorf("failed to replace image: decode base64 image to []byte: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, defaultBody)
+		return
+	}
+	// eg: imgFullname = post/839174392.jpeg
+	imgFullname, err := s.blobClient.UploadImage(r.Context(), imgType, imageBytes, &blclient.UploadImageOptions{
+		BlobName: getBlobFullName(namespace, uuid.GenUUID4()),
+	})
+	if err != nil {
+		s.logger.Errorf("failed to replace image: failed to upload image: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, defaultBody)
+		return
+	}
+
+	// delete old image
+	if err = s.blobClient.DeleteImage(r.Context(), getBlobFullName(namespace, imageId)); err != nil {
+		s.logger.Errorf("failed to delete old image at image replace: %v", err)
+	}
+
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+		"state": chttp.Success,
+		"data":  map[string]string{"imageName": imgFullname},
+	})
+}
+
 func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {
 	w.Header().Add(ContentType, ApplicationJson_Utf8)
 	w.Header().Add(Date, "")

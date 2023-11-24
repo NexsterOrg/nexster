@@ -547,7 +547,7 @@ func (s *server) CreateImagePost(w http.ResponseWriter, r *http.Request, _ httpr
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+	s.sendRespDefault(w, http.StatusCreated, map[string]interface{}{
 		"state":         success,
 		"mediaKey":      mediaKey,
 		"mediaOwnerKey": mediaOwnerKey,

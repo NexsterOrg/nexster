@@ -9,4 +9,5 @@ import (
 type Interface interface {
 	DownloadBlob(ctx context.Context, container, blob string) (*blb.RetryReader, string, error)
 	UploadBuffer(ctx context.Context, containerName, blobName, contentType string, data []byte) error
+	DeleteBlob(ctx context.Context, containerName, blobName string) error
 }

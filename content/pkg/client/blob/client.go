@@ -43,6 +43,10 @@ func (bc *blobClient) UploadImage(ctx context.Context, typeName string, data []b
 	return imgFullName, nil
 }
 
+func (bc *blobClient) DeleteImage(ctx context.Context, blobName string) error {
+	return bc.azClient.DeleteBlob(ctx, bc.azContainerName, blobName)
+}
+
 func mkImgFullname(name, typeName string) string {
 	return fmt.Sprintf("%s.%s", name, typeName)
 }
