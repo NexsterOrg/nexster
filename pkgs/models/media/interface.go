@@ -12,15 +12,18 @@ type Interface interface {
 	ListMediaWithOwner(ctx context.Context, query string, bindVars map[string]interface{}) ([]*MediaWithOwner, error)
 	ListMediaWithCustomFields(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error)
 	Get(ctx context.Context, key string) (*Media, error)
+	CreateForGivenKey(ctx context.Context, data *Media) (string, error)
+	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]string, error)
 }
 
+// TODO: Add kind = "media" if needed.
 type Media struct {
 	Key         string `json:"_key"`
 	Link        string `json:"link"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	CreateDate  string `json:"created_date"`
-	Size        int    `json:"size"`
+	Size        int    `json:"size"` // NOTE: size variable is not currently used. Therefore, we setting its value to zero.
 	Visibility  string `json:"visibility"`
 }
 

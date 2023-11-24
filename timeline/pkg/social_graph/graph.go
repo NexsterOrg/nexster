@@ -14,8 +14,10 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
+	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
 
 const perMonth float64 = (24 * 30)
@@ -91,27 +93,29 @@ const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
 
 type socialGraph struct {
-	mediaRepo    mrepo.Interface
-	userRepo     urepo.Interface
-	reactRepo    rrepo.Interface
-	facRepo      fcrepo.Interface
-	fReqCtrler   freq.Interface
-	frndCtrler   frnd.Interface
-	conentClient contapi.Interface
+	mediaRepo     mrepo.Interface
+	userRepo      urepo.Interface
+	reactRepo     rrepo.Interface
+	facRepo       fcrepo.Interface
+	fReqCtrler    freq.Interface
+	frndCtrler    frnd.Interface
+	mdOwnerCtrler mo.Interface
+	conentClient  contapi.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
-	frIntfce freq.Interface, frndIntfce frnd.Interface, contentClient contapi.Interface) *socialGraph {
+	frIntfce freq.Interface, frndIntfce frnd.Interface, mdOwnerIntfce mo.Interface, contentClient contapi.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo:    mIntfce,
-		userRepo:     uIntfce,
-		reactRepo:    rIntfce,
-		facRepo:      facIntfce,
-		fReqCtrler:   frIntfce,
-		frndCtrler:   frndIntfce,
-		conentClient: contentClient,
+		mediaRepo:     mIntfce,
+		userRepo:      uIntfce,
+		reactRepo:     rIntfce,
+		facRepo:       facIntfce,
+		fReqCtrler:    frIntfce,
+		frndCtrler:    frndIntfce,
+		mdOwnerCtrler: mdOwnerIntfce,
+		conentClient:  contentClient,
 	}
 }
 
@@ -512,4 +516,19 @@ func Split(arr []*map[string]string, offset, count int) ([]*map[string]string, i
 		return arr[offset:], ln - offset
 	}
 	return arr[offset:end], count
+}
+
+func (sgr *socialGraph) CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error) {
+	mediaKey, err := sgr.mediaRepo.CreateForGivenKey(ctx, &mrepo.Media{
+		Link: data.Link, Title: data.Title, Description: data.Description, Visibility: data.Visibility,
+		Key: "", CreateDate: "", Size: 0,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create media node: %v", err)
+	}
+	mediaOwnerKey, err := sgr.mdOwnerCtrler.Create(ctx, sgr.mediaRepo.MkMediaDocId(mediaKey), sgr.userRepo.MkUserDocId(userKey))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create media owner node: %v", err)
+	}
+	return mediaKey, mediaOwnerKey, nil
 }

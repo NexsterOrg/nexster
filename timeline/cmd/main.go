@@ -19,6 +19,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
+	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
@@ -56,6 +57,7 @@ func main() {
 	argFacCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fcrepo.FacultyColl)
 	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
 	argFriendClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
+	argMediaOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, mo.MediaOwnerColl)
 
 	mediaRepo := mrepo.NewRepo(argMedCollClient)
 	userRepo := urepo.NewCtrler(argUsrCollClient)
@@ -63,11 +65,12 @@ func main() {
 	facRepo := fcrepo.NewCtrler(argFacCollClient)
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFriendClient)
+	mdOwnerCtrler := mo.NewCtrler(argMediaOwnerClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, contentApiClient)
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient)
 	srv := tsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
@@ -83,6 +86,7 @@ func main() {
 	router.PUT("/timeline/reactions/:reaction_id", srv.UpdateMediaReactions)
 
 	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
+	router.POST("/timeline/posts/image", srv.CreateImagePost)    // Create new post
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},

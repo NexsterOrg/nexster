@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 )
@@ -45,4 +46,16 @@ func (ca *conentApiClient) GetPermission(ownerKey, viewerKey string) string {
 		return Owner
 	}
 	return Viewer
+}
+
+func GetMediaKey(imgFullname string) string {
+	parts := strings.Split(imgFullname, ".")
+	if len(parts) != 2 {
+		return ""
+	}
+	parts2 := strings.Split(parts[0], "/")
+	if len(parts2) != 2 {
+		return ""
+	}
+	return parts2[1]
 }

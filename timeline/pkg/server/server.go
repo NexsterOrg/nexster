@@ -13,6 +13,7 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
+	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
 
 const (
@@ -520,6 +521,37 @@ func (s *server) ListFriendSuggestionsV2(w http.ResponseWriter, r *http.Request,
 	respBody["results_count"] = resultCount
 	respBody["data"] = friends
 	s.sendRespDefault(w, http.StatusOK, respBody)
+}
+
+// permission : owner
+func (s *server) CreateImagePost(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
+	}
+	userKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to create image post: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	body, err := tp.ReadJsonBody[tp.Post](r)
+	if err != nil {
+		s.logger.Infof("failed to create image post: unable to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	mediaKey, mediaOwnerKey, err := s.scGraph.CreateImagePost(r.Context(), userKey, body)
+	if err != nil {
+		s.logger.Infof("failed to create image post: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+		"state":         success,
+		"mediaKey":      mediaKey,
+		"mediaOwnerKey": mediaOwnerKey,
+	})
 }
 
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {

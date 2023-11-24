@@ -8,6 +8,8 @@ import (
 	driver "github.com/arangodb/go-driver"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	tm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
+	ud "github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 )
 
 type mediaRepo struct {
@@ -91,4 +93,37 @@ func (mr *mediaRepo) Get(ctx context.Context, key string) (*Media, error) {
 	media := &Media{}
 	_, err := mr.argClient.Coll.ReadDocument(ctx, key, media)
 	return media, err
+}
+
+// Create media for given key. if key is empty string, this will create a new key
+func (mr *mediaRepo) CreateForGivenKey(ctx context.Context, data *Media) (string, error) {
+	data.Key = ud.GenUUID4()
+	data.Size = 0 // NOTE: Setting size to zero, since we are not using it.
+	data.CreateDate = tm.CurrentUTCTime()
+	if _, err := mr.argClient.Coll.CreateDocument(ctx, data); err != nil {
+		return "", err
+	}
+	return data.Key, nil
+}
+
+// Return list of strings (eg: ["element1", "anotherElem2", "thirdElem3"] ). This will use when Query return value is list of strings.
+func (mr *mediaRepo) ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]string, error) {
+	results := []string{}
+	cursor, err := mr.argClient.Db.Query(ctx, query, bindVars)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, result)
+	}
 }

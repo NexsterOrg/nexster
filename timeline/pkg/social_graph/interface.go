@@ -4,6 +4,7 @@ import (
 	"context"
 
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
 
 type Interface interface {
@@ -18,4 +19,5 @@ type Interface interface {
 	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
 	ListFriendSuggsV2(ctx context.Context, userKey, birthday, faculty, gender string, page, pageSize int) ([]*map[string]string, error)
 	AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error)
+	CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error)
 }

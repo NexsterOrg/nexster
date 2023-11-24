@@ -78,7 +78,8 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 	if namespace == avatarNS {
 		view, err = s.avatarRepo.GetView(r.Context(), getImgKey(blobName))
 	} else if namespace == postNS {
-		view, err = s.mediaRepo.GetView(r.Context(), getImgKey(blobName))
+		// for media collection, we tried to find the view by filtering based on link. link is unique in media collection.
+		view, err = s.mediaRepo.GetViewForLink(r.Context(), getBlobFullName(namespace, blobName))
 	} else if namespace == eventPostersNs {
 		// event posters have public view in the current system.
 		view = publicView
