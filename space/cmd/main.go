@@ -79,16 +79,19 @@ func main() {
 	router.GET("/space/events/:eventKey/:reactType", srv.ListLoveReactUsersForEvent)
 	router.GET("/space/events/:eventKey", srv.GetEventFromSpace)
 	router.GET("/space/events", srv.ListUpcomingEventsFromSpace)
+	router.GET("/space/my/events", srv.ListMyEventsFromSpace)
 
 	router.POST("/space/events/:eventKey/reaction", srv.CreateEventReaction)
 	router.POST("/space/events", srv.CreateEventInSpace)
 
 	router.PUT("/space/events/reactions/:reactionKey/:reactionType/:state", srv.SetEventReactionState)
 
+	router.DELETE("/space/events/:eventKey", srv.DeleteEventFromSpace)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
-		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production

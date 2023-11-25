@@ -89,3 +89,11 @@ func (ev *eventCtrler) Get(ctx context.Context, key string) (*Event, error) {
 	}
 	return event, err
 }
+
+func (ev *eventCtrler) Delete(ctx context.Context, eventKey string) (*map[string]interface{}, error) {
+	result := &map[string]interface{}{}
+	// to return deleted document
+	ctx = driver.WithReturnOld(ctx, result)
+	_, err := ev.argClient.Coll.RemoveDocument(ctx, eventKey)
+	return result, err
+}

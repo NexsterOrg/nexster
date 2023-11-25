@@ -571,9 +571,3 @@ func (sgr *socialGraph) DeleteImagePost(ctx context.Context, userKey, mediaKey s
 	}
 	return nil
 }
-
-/*
-1. remove media node
-2. remove mediaOwnerEdge
-3. delete image from cloud
-**/

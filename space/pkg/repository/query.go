@@ -57,3 +57,25 @@ const getOwnerUserKey string = `FOR v IN 1..1 OUTBOUND
 const getEventEdgeKeyOfUserReaction string = `FOR v, e IN 1..1 INBOUND @eventNode eventReactedBy
 	FILTER v._id == @userNode
 	RETURN e._key`
+
+const getMyEventsQry string = `FOR doc IN events
+	SORT DATE_TIMESTAMP(doc.date) ASC
+	LET res1 = (
+		FOR v IN 1..1 OUTBOUND doc._id postedBy
+		RETURN { "key": v._key, "username": v.username, "indexNo": v.index_no }
+	)
+	LET res2 = (
+		FOR v, e IN 1..1 INBOUND doc._id eventReactedBy
+		COLLECT love = e.love , going = e.going WITH COUNT INTO cnt
+		SORT null
+		RETURN {going , love, "count": cnt }
+	)
+	FILTER res1[0].key == @userKey
+	LIMIT @offset, @count
+	RETURN { "key": doc._key, "link": doc.link, "title": doc.title, "date": doc.date, "description": doc.description, 
+	"venue": doc.venue, "mode": doc.mode, "eventLink": doc.eventLink, "createdAt": doc.createdAt, "postedBy": res1, "reactionStates": res2 }`
+
+const rmPostedByEdgeQry string = `FOR edge IN postedBy
+	FILTER edge._from == @fromId && edge._to == @toId
+	REMOVE edge IN postedBy
+	RETURN OLD`

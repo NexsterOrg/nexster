@@ -13,4 +13,6 @@ type Interface interface {
 	ListLoveReactUsersForEvent(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateEventReaction(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	SetEventReactionState(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ListMyEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	DeleteEventFromSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }

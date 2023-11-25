@@ -247,3 +247,57 @@ func (s *server) SetEventReactionState(w http.ResponseWriter, r *http.Request, p
 	respBody["state"] = uh.Success
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
+
+// Owner permission
+func (s *server) ListMyEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+		"data":  []map[string]string{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to list my events: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if err != nil {
+		pageSize = uh.DefaultPageSize
+	}
+	events, err := s.scGraph.ListMyEvents(r.Context(), jwtUserKey, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed to list my events: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{
+		"state":        uh.Success,
+		"page":         pageNo,
+		"pageSize":     pageSize,
+		"resultsCount": len(events),
+		"data":         events,
+	})
+}
+
+func (s *server) DeleteEventFromSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": uh.Failed,
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to remove event: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	eventKey := p.ByName("eventKey")
+	if err := s.scGraph.DeleteEvent(r.Context(), jwtUserKey, eventKey); err != nil {
+		s.logger.Errorf("failed to remove event: %v: eventKey=%s", err, eventKey)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{"state": uh.Success})
+}

@@ -123,3 +123,33 @@ func (r *repo) GetKeyOfUserReaction(ctx context.Context, eventKey, userKey strin
 	}
 	return eventReactEdgeKeys[0], nil
 }
+
+func (r *repo) ListEventsForUser(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error) {
+	return r.db.ListJsonAnyValue(ctx, getMyEventsQry, map[string]interface{}{
+		"userKey": userKey,
+		"offset":  offset,
+		"count":   count,
+	})
+}
+
+func (r *repo) DelPostedByGivenFromAndTo(ctx context.Context, fromId, toId string) error {
+	delDocs, err := r.db.ListJsonAnyValue(ctx, rmPostedByEdgeQry, map[string]interface{}{
+		"fromId": fromId,
+		"toId":   toId,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to remove postedBy edge: %v", err)
+	}
+	ln := len(delDocs)
+	if ln == 1 {
+		return nil
+	}
+	if ln == 0 {
+		// not found
+		return fmt.Errorf("failed to remove postedBy edge: postedBy edge is not found")
+	}
+
+	// if ln > 1
+	return fmt.Errorf("more than one postedBy edges were removed. db in error state")
+}

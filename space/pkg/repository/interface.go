@@ -12,4 +12,6 @@ type Interface interface {
 	GetEventOwnerKey(ctx context.Context, eventKey string) (string, error)
 	ListEventAttendees(ctx context.Context, eventKey string, offset, count int) ([]*map[string]interface{}, error)
 	GetKeyOfUserReaction(ctx context.Context, eventKey, userKey string) (string, error)
+	ListEventsForUser(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error)
+	DelPostedByGivenFromAndTo(ctx context.Context, fromId, toId string) error
 }

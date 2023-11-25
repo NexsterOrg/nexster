@@ -61,7 +61,7 @@ func main() {
 
 	router.PUT("/content/images/:namespace/:imgId", csrv.ReplaceImage) // TODO: Need to check
 
-	router.DELETE("/content/images/:namespace/:imgId", csrv.DeleteImage) // TODO: Need to check
+	router.DELETE("/content/images/:namespace/:imgId", csrv.DeleteImage)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},

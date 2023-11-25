@@ -80,6 +80,25 @@ func (gr *socialGraph) ListUpcomingEvents(ctx context.Context, userKey string, o
 	return results, nil
 }
 
+// List events for given user
+func (gr *socialGraph) ListMyEvents(ctx context.Context, userKey string, offset, count int) ([]*map[string]interface{}, error) {
+	events, err := gr.repo.ListEventsForUser(ctx, userKey, offset, count)
+	if err != nil {
+		return []*map[string]interface{}{}, fmt.Errorf("falied to list latest events: %v", err)
+	}
+	results := []*map[string]interface{}{}
+
+	for _, event := range events {
+		parsedEvent, err := gr.parseEventInfo(ctx, userKey, event)
+		if err != nil {
+			log.Println("[Error]: ", err)
+			continue
+		}
+		results = append(results, &parsedEvent)
+	}
+	return results, nil
+}
+
 func (gr *socialGraph) parseEventInfo(ctx context.Context, userKey string, event *map[string]interface{}) (map[string]interface{}, error) {
 	emptyResult := map[string]interface{}{}
 	eventKey, ok := (*event)["key"].(string)
@@ -253,4 +272,27 @@ func (sgr *socialGraph) SetEventReactionState(ctx context.Context, reactorKey, r
 		return errors.NewUnAuthError("not allowed to access")
 	}
 	return sgr.reactionCtrler.UpdateState(ctx, reactionEdgeKey, data)
+}
+
+// TODO:
+// Not found & Unauthorized access errors need to handle properly.
+func (sgr *socialGraph) DeleteEvent(ctx context.Context, userKey, eventKey string) error {
+	var err error
+	if err = sgr.repo.DelPostedByGivenFromAndTo(ctx, event.MkEventDocId(eventKey), user.MkUserDocId(userKey)); err != nil {
+		return fmt.Errorf("failed to remove postedBy edge: %v", err)
+	}
+	deletedEventDoc, err := sgr.eventCtrler.Delete(ctx, eventKey)
+	if err != nil {
+		return fmt.Errorf("failed to remove event node: %v", err)
+	}
+
+	// delete image from azure blob storage
+	link, ok := (*deletedEventDoc)["link"].(string) // eg: link = event-posters/3818349.png
+	if !ok {
+		return fmt.Errorf("failed to delete event poster from azure blob storage: unable to find image link")
+	}
+	if err = sgr.conentClient.DeleteImage(ctx, link); err != nil {
+		return fmt.Errorf("failed to delete event poster from azure blob storage: %v", err)
+	}
+	return nil
 }
