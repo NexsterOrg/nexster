@@ -175,7 +175,7 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 		}
 
 		posts = append(posts, &map[string]interface{}{
-			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "Headling": user.Headling, "image_url": imgUrl},
+			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "image_url": imgUrl},
 			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
 				"laugh": viewersReacts.Laugh},
 		})

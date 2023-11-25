@@ -29,7 +29,6 @@ type User struct {
 	UserId   string `json:"_key"`
 	Username string `json:"username"`
 	ImageUrl string `json:"image_url"`
-	Headling string `json:"headling"`
 	Faculty  string `json:"faculty"`
 	Field    string `json:"field"`
 	Batch    string `json:"batch"`
