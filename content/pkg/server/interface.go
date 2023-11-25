@@ -23,4 +23,5 @@ type Interface interface {
 	CreateImgUrl(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	UploadImage(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ReplaceImage(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	DeleteImage(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }

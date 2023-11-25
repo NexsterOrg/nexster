@@ -20,4 +20,5 @@ type Interface interface {
 	ListFriendSuggsV2(ctx context.Context, userKey, birthday, faculty, gender string, page, pageSize int) ([]*map[string]string, error)
 	AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error)
 	CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error)
+	DeleteImagePost(ctx context.Context, userKey, mediaKey string) error
 }

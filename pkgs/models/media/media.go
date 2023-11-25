@@ -127,3 +127,11 @@ func (mr *mediaRepo) ListStrings(ctx context.Context, query string, bindVars map
 		results = append(results, result)
 	}
 }
+
+func (mr *mediaRepo) DeleteDocument(ctx context.Context, mediaKey string) (map[string]interface{}, error) {
+	result := &map[string]interface{}{}
+	// to return deleted document
+	ctx = driver.WithReturnOld(ctx, result)
+	_, err := mr.argClient.Coll.RemoveDocument(ctx, mediaKey)
+	return *result, err
+}

@@ -226,6 +226,26 @@ func (s *server) ReplaceImage(w http.ResponseWriter, r *http.Request, p httprout
 	})
 }
 
+// permission = owner
+// TODO: NEED TO FIX THIS QUICKLY.
+// Check wheter user has the permission to delete image or not. (jwt or some other way)
+func (s *server) DeleteImage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	namespace := p.ByName("namespace") // eg: post
+	imageId := p.ByName("imgId")       // eg: 18349583.png
+	if err := s.blobClient.DeleteImage(r.Context(), getBlobFullName(namespace, imageId)); err != nil {
+		s.logger.Errorf("failed to delete image: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, map[string]interface{}{
+			"state": chttp.Failed,
+		})
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+		"state": chttp.Success,
+	})
+}
+
+// helper functions
+
 func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map[string]interface{}) {
 	w.Header().Add(ContentType, ApplicationJson_Utf8)
 	w.Header().Add(Date, "")

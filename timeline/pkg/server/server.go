@@ -554,6 +554,32 @@ func (s *server) CreateImagePost(w http.ResponseWriter, r *http.Request, _ httpr
 	})
 }
 
+// permission : owner
+func (s *server) DeleteImagePost(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+	}
+	userKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to create image post: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	mediaKey := p.ByName("mediaKey")
+	if err := s.scGraph.DeleteImagePost(r.Context(), userKey, mediaKey); err != nil {
+		s.logger.Errorf("failed to delete image post: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+		"state": success,
+	})
+}
+
+/**
+A. check the permission
+**/
+
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
 	for key, val := range headers {
 		w.Header().Add(key, val)

@@ -59,12 +59,14 @@ func main() {
 
 	router.POST("/content/images/:namespace", csrv.UploadImage)
 
-	router.PUT("/content/images/:namespace/:imgId", csrv.ReplaceImage)
+	router.PUT("/content/images/:namespace/:imgId", csrv.ReplaceImage) // TODO: Need to check
+
+	router.DELETE("/content/images/:namespace/:imgId", csrv.DeleteImage) // TODO: Need to check
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
-		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		Debug:              false,

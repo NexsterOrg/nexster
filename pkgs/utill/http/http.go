@@ -19,3 +19,7 @@ func SendDefaultResp(w http.ResponseWriter, statusCode int, body map[string]inte
 	w.WriteHeader(statusCode)
 	w.Write(resp)
 }
+
+func IsNon2xxStatusCode(statusCode int) bool {
+	return statusCode < 200 || statusCode >= 300
+}

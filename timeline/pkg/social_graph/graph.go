@@ -92,6 +92,11 @@ const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 	RETURN  { "key": v._key, "username": v.username, "image_url": v.image_url, "batch": v.batch, 
 		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
 
+const rmMediaOwnerEdge = `FOR edge IN mediaOwnerEdges
+	FILTER edge._from == @fromId && edge._to == @toId
+	REMOVE edge IN mediaOwnerEdges
+	RETURN OLD`
+
 type socialGraph struct {
 	mediaRepo     mrepo.Interface
 	userRepo      urepo.Interface
@@ -532,3 +537,43 @@ func (sgr *socialGraph) CreateImagePost(ctx context.Context, userKey string, dat
 	}
 	return mediaKey, mediaOwnerKey, nil
 }
+
+func (sgr *socialGraph) DeleteImagePost(ctx context.Context, userKey, mediaKey string) error {
+	// delete media owner edge document
+	mdOwnerEdge, err := sgr.mdOwnerCtrler.ListStringValueJson(ctx, rmMediaOwnerEdge, map[string]interface{}{
+		"fromId": sgr.mediaRepo.MkMediaDocId(mediaKey),
+		"toId":   sgr.userRepo.MkUserDocId(userKey),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove mediaOwenerEdge: %v", err)
+	}
+	ln := len(mdOwnerEdge)
+	if ln == 0 {
+		// not found
+		return fmt.Errorf("failed to remove mediaOwenerEdge: mediaOwnerEdge is not found")
+	}
+	if ln > 1 {
+		return fmt.Errorf("more than one mediaOwnerEdges were removed. db in error state")
+	}
+	// delete media node document
+	var deletedMediaDoc map[string]interface{}
+	if deletedMediaDoc, err = sgr.mediaRepo.DeleteDocument(ctx, mediaKey); err != nil {
+		return fmt.Errorf("failed to remove media document: %v", err)
+	}
+
+	// delete image from azure blob storage
+	link, ok := deletedMediaDoc["link"].(string) // eg: link = post/3818349.png
+	if !ok {
+		return fmt.Errorf("failed to delete image from azure blob storage: unable to find image link")
+	}
+	if err = sgr.conentClient.DeleteImage(ctx, link); err != nil {
+		return fmt.Errorf("failed to delete image from azure blob storage: %v", err)
+	}
+	return nil
+}
+
+/*
+1. remove media node
+2. remove mediaOwnerEdge
+3. delete image from cloud
+**/

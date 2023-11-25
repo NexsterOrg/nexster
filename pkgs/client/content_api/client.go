@@ -1,6 +1,7 @@
 package contentapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
+	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
 )
 
 type conentApiClient struct {
@@ -30,6 +32,10 @@ func (ca *conentApiClient) CreateImageUrl(imgIdWithNamespace, permission string)
 	}
 	defer resp.Body.Close()
 
+	if uh.IsNon2xxStatusCode(resp.StatusCode) {
+		return "", fmt.Errorf("request failed with %s code", resp.Status)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -40,6 +46,26 @@ func (ca *conentApiClient) CreateImageUrl(imgIdWithNamespace, permission string)
 	}
 	return data["url"], nil
 }
+
+func (ca *conentApiClient) DeleteImage(ctx context.Context, imgIdWithNamespace string) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE", fmt.Sprintf("%s/content/images/%s", ca.domain, imgIdWithNamespace), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := ca.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if uh.IsNon2xxStatusCode(resp.StatusCode) {
+		return fmt.Errorf("request failed with %s code", resp.Status)
+	}
+	return nil
+}
+
+// helper functions
 
 func (ca *conentApiClient) GetPermission(ownerKey, viewerKey string) string {
 	if ownerKey == viewerKey {

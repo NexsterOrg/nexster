@@ -88,10 +88,12 @@ func main() {
 	router.POST("/timeline/reactions", srv.CreateMediaReactions) // Create new reaction link
 	router.POST("/timeline/posts/image", srv.CreateImagePost)    // Create new post
 
+	router.DELETE("/timeline/posts/image/:mediaKey", srv.DeleteImagePost) // Delete post
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000"},
 		AllowCredentials:   true,
-		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
 		// Enable Debugging for testing, consider disabling in production

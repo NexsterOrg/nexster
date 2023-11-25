@@ -30,6 +30,7 @@ type Interface interface {
 	ListRoleBasedMedia(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendSuggestionsV2(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	CreateImagePost(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	DeleteImagePost(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type Reaction struct {
