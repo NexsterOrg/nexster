@@ -15,6 +15,8 @@ import (
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
+	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
+	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	rp "github.com/NamalSanjaya/nexster/search/pkg/repository"
 	spsrv "github.com/NamalSanjaya/nexster/search/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/search/pkg/social_graph"
@@ -47,13 +49,19 @@ func main() {
 	// arango db client
 	argdbClient := argdb.NewDbClient(ctx, &configs.ArgDbCfg)
 
+	// client per collection
+	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
+	argFriendClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
+
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
 	// repo
 	repo := rp.NewRepo(argdbClient)
+	frReqCtrler := freq.NewCtrler(argFrndReqClient)
+	frndCtrler := frnd.NewCtrler(argFriendClient)
 
-	sociGrphCtrler := socigr.NewGraph(contentApiClient, repo)
+	sociGrphCtrler := socigr.NewGraph(contentApiClient, repo, frReqCtrler, frndCtrler)
 	srv := spsrv.New(sociGrphCtrler, logger)
 
 	router.GET("/search/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

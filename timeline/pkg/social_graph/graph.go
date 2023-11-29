@@ -458,6 +458,8 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 			continue
 		}
 		(*user)["image_url"] = imgUrl
+		delete(*user, "score")
+		delete(*user, "birthday")
 	}
 	return combinedResult, nil
 }
