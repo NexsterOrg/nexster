@@ -88,6 +88,28 @@ func (d *dbClient) ListJsonAnyValue(ctx context.Context, query string, bindVar m
 	}
 }
 
+// results format [ {}, {}, {} ]
+func (d *dbClient) ListJsonStringValue(ctx context.Context, query string, bindVar map[string]interface{}) ([]*map[string]string, error) {
+	results := []*map[string]string{}
+	cursor, err := d.db.Query(ctx, query, bindVar)
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result map[string]string
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
+}
+
 // results format [ "elem1", "elem2", "elem3" ]
 func (d *dbClient) ListStrings(ctx context.Context, query string, bindVar map[string]interface{}) ([]string, error) {
 	results := []string{}

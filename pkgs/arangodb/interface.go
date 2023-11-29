@@ -8,4 +8,5 @@ import (
 type Interface interface {
 	ListJsonAnyValue(ctx context.Context, query string, bindVar map[string]interface{}) ([]*map[string]interface{}, error)
 	ListStrings(ctx context.Context, query string, bindVar map[string]interface{}) ([]string, error)
+	ListJsonStringValue(ctx context.Context, query string, bindVar map[string]interface{}) ([]*map[string]string, error)
 }
