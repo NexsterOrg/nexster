@@ -42,6 +42,7 @@ func ReadJsonBody[T UsrmgmtTypes](r *http.Request) (*T, error) {
 func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 	firstNameTemp := ""
 	secondNameTemp := ""
+	isFac := false
 	result := make(map[string]interface{})
 
 	v := reflect.ValueOf(data).Elem()
@@ -53,6 +54,9 @@ func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 		if v.Field(i).String() != "" {
 			fieldName := ustr.FirstCharToLower(field.Name)
 			result[fieldName] = value
+			if fieldName == "faculty" {
+				isFac = true
+			}
 			if fieldName == "firstName" {
 				firstNameTemp = value.(string)
 			} else if fieldName == "secondName" {
@@ -78,9 +82,12 @@ func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 		delete(result, "secondName")
 	}
 
-	fac := result["faculty"].(string)
-	if fac != "Engineering" {
-		result["field"] = ""
+	if isFac {
+		fac := result["faculty"].(string)
+		if fac != "Engineering" {
+			result["field"] = ""
+		}
 	}
+
 	return result
 }
