@@ -289,7 +289,7 @@ func (sgr *socialGraph) GetProfileInfo(ctx context.Context, userKey string) (map
 	}
 	return map[string]string{
 		"key": userKey, "username": info.Username, "faculty": info.Faculty, "field": info.Field, "batch": info.Batch,
-		"img_url": imgUrl, "about": info.About,
+		"img_url": imgUrl, "about": info.About, "firstName": info.FirstName, "secondName": info.SecondName, "gender": info.Gender, "birthday": info.Birthday,
 	}, nil
 }
 
@@ -311,4 +311,12 @@ func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string)
 		return "", fmt.Errorf("indexNo=%s is not unique, array of userkeys exists", indexNo)
 	}
 	return *res[0], err
+}
+
+func (sgr *socialGraph) UpdateUser(ctx context.Context, userId string, data map[string]interface{}) error {
+	return sgr.usrCtrler.UpdateUser(ctx, userId, data)
+}
+
+func (sgr *socialGraph) DeleteUser(ctx context.Context, userId string) error {
+	return sgr.usrCtrler.DeleteUser(ctx, userId)
 }

@@ -97,8 +97,11 @@ func main() {
 		w.Write([]byte("your details was captured. logged in"))
 	})
 
+	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
+
 	router.DELETE("/usrmgmt/friend_req/:friend_req_id", srv.RemovePendingFriendReq)
 	router.DELETE("/usrmgmt/friend/:friend_id", srv.RemoveFriendship)
+	router.DELETE("/usrmgmt/profile", srv.DeleteUser)
 
 	log.Println("usrmgmt_server - Listen 8000.....")
 	log.Fatal(http.ListenAndServe(":8000", handler))

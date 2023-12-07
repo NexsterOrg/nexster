@@ -20,4 +20,6 @@ type Interface interface {
 	GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error)
 	ListFriendReqs(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error)
 	GetAllFriendReqsCount(ctx context.Context, userKey string) (int, error)
+	UpdateUser(ctx context.Context, userId string, data map[string]interface{}) error
+	DeleteUser(ctx context.Context, userId string) error
 }

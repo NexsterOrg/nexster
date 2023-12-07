@@ -1,0 +1,86 @@
+package types
+
+import (
+	"encoding/json"
+	"io"
+	"log"
+	"net/http"
+	"reflect"
+
+	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
+)
+
+type Profile struct {
+	About      string `json:"about"`
+	FirstName  string `json:"firstName"`
+	SecondName string `json:"secondName"`
+	Faculty    string `json:"faculty"`
+	Field      string `json:"field"`
+	Batch      string `json:"batch"`
+	Gender     string `json:"gender"`
+	Birthday   string `json:"birthday"`
+}
+
+type UsrmgmtTypes interface {
+	Profile
+}
+
+// Generic function to read http req json body
+func ReadJsonBody[T UsrmgmtTypes](r *http.Request) (*T, error) {
+	var data *T = new(T)
+	b, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		return data, err
+	}
+	if err = json.Unmarshal(b, &data); err != nil {
+		return data, err
+	}
+	return data, nil
+}
+
+func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
+	firstNameTemp := ""
+	secondNameTemp := ""
+	result := make(map[string]interface{})
+
+	v := reflect.ValueOf(data).Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i).Interface()
+		if v.Field(i).String() != "" {
+			fieldName := ustr.FirstCharToLower(field.Name)
+			result[fieldName] = value
+			if fieldName == "firstName" {
+				firstNameTemp = value.(string)
+			} else if fieldName == "secondName" {
+				secondNameTemp = value.(string)
+			}
+		}
+	}
+
+	isFirstNameEmpty := firstNameTemp == ""
+	isSecondNameEmpty := secondNameTemp == ""
+
+	if !isFirstNameEmpty && !isSecondNameEmpty {
+		result["username"] = firstNameTemp + " " + secondNameTemp
+	}
+	if !isFirstNameEmpty && isSecondNameEmpty {
+		// not allow firstName to update
+		log.Println("Edit basic user info: remove firstName")
+		delete(result, "firstName")
+	}
+	if isFirstNameEmpty && !isSecondNameEmpty {
+		// not allow secondName to update
+		log.Println("Edit basic user info: remove secondName")
+		delete(result, "secondName")
+	}
+
+	fac := result["faculty"].(string)
+	if fac != "Engineering" {
+		result["field"] = ""
+	}
+	return result
+}

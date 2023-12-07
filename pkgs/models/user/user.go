@@ -8,6 +8,7 @@ import (
 	driver "github.com/arangodb/go-driver"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 )
 
 type userCtrler struct {
@@ -139,5 +140,24 @@ func (uc *userCtrler) CountUsers(ctx context.Context, query string, bindVars map
 func (uc *userCtrler) GetUser(ctx context.Context, key string) (*User, error) {
 	user := &User{}
 	_, err := uc.argClient.Coll.ReadDocument(ctx, key, user)
+	if driver.IsNotFoundGeneral(err) {
+		return nil, errs.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
 	return user, err
+}
+
+func (uc *userCtrler) UpdateUser(ctx context.Context, key string, updateFields map[string]interface{}) error {
+	_, err := uc.argClient.Coll.UpdateDocument(ctx, key, updateFields)
+	if driver.IsNotFoundGeneral(err) {
+		return errs.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
+	return err
+}
+
+func (uc *userCtrler) DeleteUser(ctx context.Context, key string) error {
+	_, err := uc.argClient.Coll.RemoveDocument(ctx, key)
+	if driver.IsNotFoundGeneral(err) {
+		return errs.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
+	return err
 }

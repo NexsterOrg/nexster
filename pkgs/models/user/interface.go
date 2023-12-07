@@ -14,6 +14,8 @@ type Interface interface {
 	GetUser(ctx context.Context, key string) (*User, error)
 	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]*string, error)
 	ListUsersAnyJsonValue(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]interface{}, error)
+	UpdateUser(ctx context.Context, key string, updateFields map[string]interface{}) error
+	DeleteUser(ctx context.Context, key string) error
 }
 
 // TODO:
@@ -26,13 +28,17 @@ type DegreeInfo struct {
 }
 
 type User struct {
-	UserId   string `json:"_key"`
-	Username string `json:"username"`
-	ImageUrl string `json:"image_url"`
-	Faculty  string `json:"faculty"`
-	Field    string `json:"field"`
-	Batch    string `json:"batch"`
-	About    string `json:"about"`
+	UserId     string `json:"_key"`
+	Username   string `json:"username"`
+	ImageUrl   string `json:"image_url"`
+	Faculty    string `json:"faculty"`
+	Field      string `json:"field"`
+	Batch      string `json:"batch"`
+	About      string `json:"about"`
+	FirstName  string `json:"firstName"`
+	SecondName string `json:"secondName"`
+	Gender     string `json:"gender"`
+	Birthday   string `json:"birthday"`
 }
 
 type UserRole int

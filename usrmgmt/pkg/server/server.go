@@ -14,8 +14,10 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	jwtPrvdr "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
+	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
 )
 
 const (
@@ -413,6 +415,62 @@ func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprout
 	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Authorization header set in response"))
+}
+
+func (s *server) EditBasicProfileInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{"state": failed}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed update basic profile info: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	body, err := typ.ReadJsonBody[typ.Profile](r)
+	if err != nil {
+		s.logger.Infof("failed update basic profile info: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	data := typ.RemoveEmptyFields[typ.Profile](body)
+
+	err = s.scGraph.UpdateUser(r.Context(), jwtUserKey, data)
+
+	if errors.IsNotFoundError(err) {
+		s.logger.Infof("failed update basic profile info: failed to find document: %v", err)
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed update basic profile info: failed to update user: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
+}
+
+func (s *server) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{"state": failed}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed delete user profile: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	err := s.scGraph.DeleteUser(r.Context(), jwtUserKey)
+
+	if errors.IsNotFoundError(err) {
+		s.logger.Infof("failed delete user profile: failed to find document: %v", err)
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed delete user profile: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.

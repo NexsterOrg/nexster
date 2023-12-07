@@ -28,6 +28,8 @@ type Interface interface {
 	GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetAllFriendReqsCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	EditBasicProfileInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type FriendRequest struct {
