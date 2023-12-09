@@ -473,6 +473,53 @@ func (s *server) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
+func (s *server) ResetPassword(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{"state": failed}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed reset password: unsupported user_key type in JWT token: unauthorized request")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	data, err := typ.ReadJsonBody[typ.PasswordResetInfo](r)
+	if err != nil {
+		s.logger.Infof("failed reset password: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed reset password: required fields are not in password reset json content, %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	err = s.scGraph.ResetPassword(r.Context(), jwtUserKey, data.CurrentPassword, data.NewPassword)
+
+	if errors.IsNotEligibleError(err) {
+		s.logger.Infof("failed reset password: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	if errors.IsNotFoundError(err) {
+		s.logger.Infof("failed reset password: failed to find user: %v", err)
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	if errors.IsNotConflictError(err) {
+		s.logger.Infof("failed reset password: many users exist with usere key=%s: %v", jwtUserKey, err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed reset password: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	subject := "482191" // TODO: change to user_key of authenticated user.

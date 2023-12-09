@@ -12,6 +12,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	pwd "github.com/NamalSanjaya/nexster/pkgs/utill/password"
 )
 
 const userColl string = "users" // Need to be changed once `users` repo bring to common level
@@ -54,6 +55,10 @@ const allFriendReqsCountQry string = `FOR doc IN friendRequest
 const friendReqPairQry string = `FOR doc IN friendRequest
 	FILTER doc._key == @friendReqKey
 	RETURN {"from" : doc._from, "to" : doc._to }`
+
+const getPasswordQry string = `FOR v IN users
+	filter v._key == @givenUserKey
+	RETURN v.password`
 
 type socialGraph struct {
 	fReqCtrler   freq.Interface
@@ -320,3 +325,41 @@ func (sgr *socialGraph) UpdateUser(ctx context.Context, userId string, data map[
 func (sgr *socialGraph) DeleteUser(ctx context.Context, userId string) error {
 	return sgr.usrCtrler.DeleteUser(ctx, userId)
 }
+
+func (sgr *socialGraph) ResetPassword(ctx context.Context, userKey, givenOldPasswd, newPasswd string) error {
+	results, err := sgr.usrCtrler.ListStrings(ctx, getPasswordQry, map[string]interface{}{
+		"givenUserKey": userKey,
+	})
+	if err != nil {
+		return err
+	}
+
+	ln := len(results)
+	if ln == 0 {
+		return errs.NewNotFoundError(fmt.Sprintf("user with key %s not found", userKey))
+	}
+	if ln > 1 {
+		return errs.NewConflictError(fmt.Sprintf("more than one user found for user key=%s", userKey))
+	}
+	curPasswdHash := *results[0]
+	if !pwd.CheckPasswordHash(givenOldPasswd, curPasswdHash) {
+		return errs.NewNotEligibleError("password is not matched")
+	}
+
+	newPasswdHash, err := pwd.HashPassword(newPasswd)
+	if err != nil {
+		return fmt.Errorf("failed to hash the password: %v", err)
+	}
+
+	return sgr.usrCtrler.UpdateUser(ctx, userKey, map[string]interface{}{
+		"password": newPasswdHash,
+	})
+}
+
+/*
+steps
+1. check given old password with system old password
+2. change system password to given new password
+getPasswordQry
+
+*/

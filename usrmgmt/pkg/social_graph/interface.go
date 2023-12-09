@@ -22,4 +22,5 @@ type Interface interface {
 	GetAllFriendReqsCount(ctx context.Context, userKey string) (int, error)
 	UpdateUser(ctx context.Context, userId string, data map[string]interface{}) error
 	DeleteUser(ctx context.Context, userId string) error
+	ResetPassword(ctx context.Context, userKey, givenOldPasswd, newPasswd string) error
 }

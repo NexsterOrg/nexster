@@ -98,6 +98,7 @@ func main() {
 	})
 
 	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
+	router.PUT("/usrmgmt/profile/password", srv.ResetPassword)
 
 	router.DELETE("/usrmgmt/friend_req/:friend_req_id", srv.RemovePendingFriendReq)
 	router.DELETE("/usrmgmt/friend/:friend_id", srv.RemoveFriendship)

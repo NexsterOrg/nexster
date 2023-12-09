@@ -21,8 +21,13 @@ type Profile struct {
 	Birthday   string `json:"birthday"`
 }
 
+type PasswordResetInfo struct {
+	CurrentPassword string `json:"cp" validate:"required"`
+	NewPassword     string `json:"np" validate:"required"`
+}
+
 type UsrmgmtTypes interface {
-	Profile
+	Profile | PasswordResetInfo
 }
 
 // Generic function to read http req json body
@@ -39,6 +44,8 @@ func ReadJsonBody[T UsrmgmtTypes](r *http.Request) (*T, error) {
 	return data, nil
 }
 
+// This function does: remove empty fields, setting data properly(eg: username),
+// set field to "" when necessary.
 func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 	firstNameTemp := ""
 	secondNameTemp := ""
