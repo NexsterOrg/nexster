@@ -575,6 +575,7 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 		"state": success,
 		"data": map[string]string{
 			"access_token": accessToken,
+			"id":           userKey,
 		},
 	})
 }
