@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	loginPath    string = "/usrmgmt/login"
-	registerPath string = "/usrmgmt/register"
-	setTokenPath string = "/usrmgmt/set-token/"
+	AccessTokenPath string = "/usrmgmt/auth/token"
+	registerPath    string = "/usrmgmt/register"
+	setTokenPath    string = "/usrmgmt/set-token/"
 )
 
 type authProvider struct {
@@ -24,12 +24,12 @@ func NewAuthProvider(jwtIntfce jwtAuth.Interface) *authProvider {
 }
 
 func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// temporty path to get token for development work
+	// TODO: temporty path to get token for development work
 	if strings.HasPrefix(r.URL.Path, setTokenPath) {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path == loginPath {
+	if r.URL.Path == AccessTokenPath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

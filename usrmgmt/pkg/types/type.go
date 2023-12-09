@@ -26,8 +26,13 @@ type PasswordResetInfo struct {
 	NewPassword     string `json:"np" validate:"required"`
 }
 
+type AccessTokenBody struct {
+	IndexNo  string `json:"index" validate:"required"`
+	Password string `json:"passwd" validate:"required"`
+}
+
 type UsrmgmtTypes interface {
-	Profile | PasswordResetInfo
+	Profile | PasswordResetInfo | AccessTokenBody
 }
 
 // Generic function to read http req json body

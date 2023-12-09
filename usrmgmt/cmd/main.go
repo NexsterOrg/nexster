@@ -97,6 +97,8 @@ func main() {
 		w.Write([]byte("your details was captured. logged in"))
 	})
 
+	router.POST(authprv.AccessTokenPath, srv.GetAccessToken)
+
 	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
 	router.PUT("/usrmgmt/profile/password", srv.ResetPassword)
 

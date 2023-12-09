@@ -31,6 +31,7 @@ type Interface interface {
 	EditBasicProfileInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ResetPassword(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	GetAccessToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type FriendRequest struct {

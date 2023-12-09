@@ -520,6 +520,65 @@ func (s *server) ResetPassword(w http.ResponseWriter, r *http.Request, _ httprou
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
+func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
+	}
+
+	data, err := typ.ReadJsonBody[typ.AccessTokenBody](r)
+	if err != nil {
+		s.logger.Infof("failed get access token: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed get access token: required fields are not in password reset json content, %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	// if validate success, this will return relavent user key.
+	userKey, err := s.scGraph.ValidatePasswordForToken(r.Context(), data.IndexNo, data.Password)
+
+	if errors.IsUnAuthError(err) {
+		s.logger.Infof("failed get access token: %v", err)
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	if errors.IsNotFoundError(err) {
+		s.logger.Infof("failed get access token: %v", err)
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	if errors.IsNotConflictError(err) {
+		s.logger.Infof("failed get access token: many users exist with index no=%s: %v", data.IndexNo, err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed get access token: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+
+	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
+	accessToken, err := jwtPrvdr.GenJwtToken(authProvider, userKey, aud)
+
+	if err != nil {
+		s.logger.Errorf("failed get access token: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
+		"state": success,
+		"data": map[string]string{
+			"access_token": accessToken,
+		},
+	})
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	subject := "482191" // TODO: change to user_key of authenticated user.
