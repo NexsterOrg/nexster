@@ -13,9 +13,10 @@ import (
 	lg "github.com/labstack/gommon/log"
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
-	jwtPrvdr "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
-	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
+	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
+	tm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
 )
@@ -27,6 +28,15 @@ const (
 	defaultPageSize int    = 20
 )
 
+// email related
+const subjectOfMail = "Welcome to Nexster - Create Your Account Now!"
+const htmlMailBody string = `
+<p>Hi,</p>
+<p>Welcome to Nexster! We're excited to have you on board. To get started, please click the link below to create your account:</p>
+<p><a href="%s">Link to Account Creation</a></p>
+<p>Best regards,<br>The Nexster Team</p>
+`
+
 // Auth Provider Related Configs
 const authProvider string = "usrmgmt"
 const timeline string = "timeline"
@@ -35,16 +45,20 @@ const imageAsAud string = "image"
 const searchAsAud string = "search"
 
 type server struct {
-	scGraph socigr.Interface
-	logger  *lg.Logger
+	config     *ServerConfig
+	scGraph    socigr.Interface
+	logger     *lg.Logger
+	mailClient umail.Interface
 }
 
 var _ Interface = (*server)(nil)
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
+func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, mailIntfce umail.Interface) *server {
 	return &server{
-		scGraph: sgrInterface,
-		logger:  logger,
+		config:     cfg,
+		scGraph:    sgrInterface,
+		logger:     logger,
+		mailClient: mailIntfce,
 	}
 }
 
@@ -135,7 +149,7 @@ func (s *server) CreateNewFriendReq(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 	results, err := s.scGraph.CreateFriendReq(r.Context(), jwtUserKey, data.To, data.Mode, data.State, currentUTCTime())
-	if errs.IsNotEligibleError(err) {
+	if errors.IsNotEligibleError(err) {
 		s.logger.Infof("failed to create friend req: %v", err)
 		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
@@ -175,12 +189,12 @@ func (s *server) RemovePendingFriendReq(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	err := s.scGraph.RemoveFriendRequest(r.Context(), friendReqId, jwtUserKey, otherUserKey)
-	if errs.IsUnAuthError(err) {
+	if errors.IsUnAuthError(err) {
 		s.logger.Infof("failed remove friend request: %v", err)
 		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
 	}
-	if errs.IsNotFoundError(err) {
+	if errors.IsNotFoundError(err) {
 		s.logger.Infof("failed remove friend request: %v", err)
 		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
@@ -402,7 +416,7 @@ func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprout
 		return
 	}
 	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	token, err := jwtPrvdr.GenJwtToken(authProvider, userId, aud)
+	token, err := jwt.GenJwtToken(authProvider, userId, aud)
 
 	if err != nil {
 		// log the error
@@ -563,7 +577,7 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	accessToken, err := jwtPrvdr.GenJwtToken(authProvider, userKey, aud)
+	accessToken, err := jwt.GenJwtToken(authProvider, userKey, aud)
 
 	if err != nil {
 		s.logger.Errorf("failed get access token: %v", err)
@@ -580,11 +594,45 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 	})
 }
 
+func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{"state": failed}
+
+	data, err := typ.ReadJsonBody[typ.AccountCreationLinkBody](r)
+	if err != nil {
+		s.logger.Infof("failed to send account creation link: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to send account creation link: required fields are not in password reset json content, %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	// 30 min account creation link
+	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(30), 10)
+
+	accountCreationLink := fmt.Sprintf("%s/%s?index=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FrontendPath,
+		data.IndexNo, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.IndexNo, expiredAt),
+	)
+
+	uniEmail := fmt.Sprintf("%s@uom.lk", data.IndexNo) // create university email
+
+	if err = s.mailClient.SendEmail(uniEmail, subjectOfMail, fmt.Sprintf(htmlMailBody, accountCreationLink)); err != nil {
+		s.logger.Errorf("failed to send account creation link: unable to send the mail: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
+
+}
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	subject := "482191" // TODO: change to user_key of authenticated user.
 	aud := []string{authProvider, timeline}
-	token, err := jwtPrvdr.GenJwtToken(authProvider, subject, aud)
+	token, err := jwt.GenJwtToken(authProvider, subject, aud)
 
 	if err != nil {
 		// log the error

@@ -18,14 +18,17 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
 	authprv "github.com/NamalSanjaya/nexster/usrmgmt/pkg/auth_provider"
 	usrv "github.com/NamalSanjaya/nexster/usrmgmt/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 )
 
 type Configs struct {
+	Server           usrv.ServerConfig   `yaml:"server"`
 	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
 	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
+	MailCfg          umail.MailConfig    `yaml:"mail"`
 }
 
 const issuer string = "usrmgmt"
@@ -55,8 +58,11 @@ func main() {
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
+	// mail client
+	mailClient := umail.New(&configs.MailCfg)
+
 	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient)
-	srv := usrv.New(grCtrler, logger)
+	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient)
 
 	router := httprouter.New()
 
@@ -98,6 +104,7 @@ func main() {
 	})
 
 	router.POST(authprv.AccessTokenPath, srv.GetAccessToken)
+	router.POST(authprv.AccountCreationLinkPath, srv.EmailAccountCreationLink)
 
 	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
 	router.PUT("/usrmgmt/profile/password", srv.ResetPassword)

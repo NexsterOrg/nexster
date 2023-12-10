@@ -31,8 +31,13 @@ type AccessTokenBody struct {
 	Password string `json:"passwd" validate:"required"`
 }
 
+type AccountCreationLinkBody struct {
+	IndexNo string `json:"index" validate:"required"`
+	// Email   string `json:"email" validate:"required"`
+}
+
 type UsrmgmtTypes interface {
-	Profile | PasswordResetInfo | AccessTokenBody
+	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody
 }
 
 // Generic function to read http req json body

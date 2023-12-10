@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	AccessTokenPath string = "/usrmgmt/auth/token"
-	registerPath    string = "/usrmgmt/register"
-	setTokenPath    string = "/usrmgmt/set-token/"
+	AccessTokenPath         string = "/usrmgmt/auth/token"
+	AccountCreationLinkPath string = "/usrmgmt/auth/reg-link"
+	registerPath            string = "/usrmgmt/auth/reg"
+	setTokenPath            string = "/usrmgmt/set-token/"
 )
 
 type authProvider struct {
@@ -29,11 +30,7 @@ func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path == AccessTokenPath {
-		ap.authCtrler.AuthDisabledServeHTTP(w, r)
-		return
-	}
-	if r.URL.Path == registerPath {
+	if r.URL.Path == AccessTokenPath || r.URL.Path == AccountCreationLinkPath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

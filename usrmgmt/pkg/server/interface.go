@@ -32,6 +32,7 @@ type Interface interface {
 	DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ResetPassword(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetAccessToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	EmailAccountCreationLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type FriendRequest struct {
@@ -47,4 +48,10 @@ type FriendReqAcceptance struct {
 	User1Key string `json:"reqstor_id" validate:"required"`
 	// User2Key   string `json:"acceptor_id" validate:"required"`
 	// AcceptedAt string `json:"accepted_at" validate:"required"`
+}
+
+type ServerConfig struct {
+	SecretHmacKey  string `yaml:"secretHmacKey"`
+	FrontendDomain string `yaml:"frontendDomain"`
+	FrontendPath   string `yaml:"frontendPath"`
 }

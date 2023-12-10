@@ -20,6 +20,7 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.1 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+	github.com/go-mail/mail v2.3.1+incompatible // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/hbollon/go-edlib v1.6.0 // indirect
@@ -35,5 +36,6 @@ require (
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
