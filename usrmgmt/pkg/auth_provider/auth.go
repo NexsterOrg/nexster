@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	AccessTokenPath         string = "/usrmgmt/auth/token"
-	AccountCreationLinkPath string = "/usrmgmt/auth/reg-link"
-	registerPath            string = "/usrmgmt/auth/reg"
-	setTokenPath            string = "/usrmgmt/set-token/"
+	AccessTokenPath             string = "/usrmgmt/auth/token"
+	AccountCreationLinkPath     string = "/usrmgmt/auth/reg-link"
+	AccCreationLinkValidatePath string = "/usrmgmt/auth/reg-link/validate"
+	registerPath                string = "/usrmgmt/auth/reg"
+	setTokenPath                string = "/usrmgmt/set-token/"
 )
 
 type authProvider struct {
@@ -30,7 +31,8 @@ func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path == AccessTokenPath || r.URL.Path == AccountCreationLinkPath {
+	if r.URL.Path == AccessTokenPath || r.URL.Path == AccountCreationLinkPath ||
+		r.URL.Path == AccCreationLinkValidatePath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

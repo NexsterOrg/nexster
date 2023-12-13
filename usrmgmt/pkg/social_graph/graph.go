@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -310,6 +311,7 @@ func (sgr *socialGraph) CountFriendsV2(ctx context.Context, userId string) (int,
 }
 
 func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string) (string, error) {
+	indexNo = strings.ToLower(indexNo)
 	res, err := sgr.usrCtrler.ListStrings(ctx, getUserKey, map[string]interface{}{
 		"indexNo": indexNo,
 	})

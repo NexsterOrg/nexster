@@ -16,6 +16,7 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
 	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
+	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	tm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	socigr "github.com/NamalSanjaya/nexster/usrmgmt/pkg/social_graph"
 	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
@@ -609,6 +610,21 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// TODO:
+	// Allow only for predetermined index no: (eg: by looking at first three characters in index number.)
+
+	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), data.IndexNo)
+	if err != nil {
+		s.logger.Errorf("failed to send account creation link: unable to get user key: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if userKey != "" {
+		s.logger.Info("failed to send account creation link: account is already exist.")
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+
 	// 30 min account creation link
 	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(30), 10)
 
@@ -616,9 +632,7 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 		data.IndexNo, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.IndexNo, expiredAt),
 	)
 
-	uniEmail := fmt.Sprintf("%s@uom.lk", data.IndexNo) // create university email
-
-	if err = s.mailClient.SendEmail(uniEmail, subjectOfMail, fmt.Sprintf(htmlMailBody, accountCreationLink)); err != nil {
+	if err = s.mailClient.SendEmail(fmt.Sprintf("%s@uom.lk", data.IndexNo), subjectOfMail, fmt.Sprintf(htmlMailBody, accountCreationLink)); err != nil {
 		s.logger.Errorf("failed to send account creation link: unable to send the mail: %v", err)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
@@ -626,6 +640,55 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 
+}
+
+func (s *server) ValidateLinkCreationParams(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{"state": failed}
+
+	data, err := typ.ReadJsonBody[typ.LinkCreationParams](r)
+	if err != nil {
+		s.logger.Infof("failed to verify link creation params: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to verify link creation params: required fields are not in password reset json content, %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	// hmac validation
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.ExpiredAt) {
+		s.logger.Info("failed to verify link creation params: hmac valdiation failed")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	expiredAt, err := ustr.StrToInt64(data.ExpiredAt)
+	if err != nil {
+		s.logger.Infof("failed to verify link creation params: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	if tm.HasUnixTimeExceeded(expiredAt) {
+		s.logger.Infof("failed to verify link creation params: link is expired")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), data.IndexNo)
+	if err != nil {
+		s.logger.Errorf("failed to verify link creation params: unable to get user key: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if userKey != "" {
+		s.logger.Info("failed to verify link creation params: account is already exist.")
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.

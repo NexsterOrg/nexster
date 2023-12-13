@@ -33,11 +33,16 @@ type AccessTokenBody struct {
 
 type AccountCreationLinkBody struct {
 	IndexNo string `json:"index" validate:"required"`
-	// Email   string `json:"email" validate:"required"`
+}
+
+type LinkCreationParams struct {
+	IndexNo   string `json:"index" validate:"required"`
+	ExpiredAt string `json:"exp" validate:"required"`
+	Hmac      string `json:"hmac" validate:"required"`
 }
 
 type UsrmgmtTypes interface {
-	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody
+	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams
 }
 
 // Generic function to read http req json body

@@ -15,3 +15,7 @@ func CurrentUTCTimeTillMinutes() string {
 func AddMinToCurrentTime(amountInMin int) int64 {
 	return time.Now().Add(time.Duration(amountInMin) * time.Minute).Unix()
 }
+
+func HasUnixTimeExceeded(unixTime int64) bool {
+	return unixTime < time.Now().Unix()
+}
