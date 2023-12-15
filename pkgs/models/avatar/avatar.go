@@ -26,3 +26,12 @@ func (ac *avatarCtrler) Get(ctx context.Context, key string) (*Avatar, error) {
 	_, err := ac.argClient.Coll.ReadDocument(ctx, key, avatar)
 	return avatar, err
 }
+
+// key should be coming from image id.
+func (ac *avatarCtrler) Create(ctx context.Context, doc *Avatar) (string, error) {
+	_, err := ac.argClient.Coll.CreateDocument(ctx, doc)
+	if err != nil {
+		return "", err
+	}
+	return doc.Key, nil
+}
