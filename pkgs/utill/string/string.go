@@ -19,6 +19,19 @@ func FirstCharToLower(input string) string {
 	return string(inputInrunes)
 }
 
+func FirstCharToUpper(input string) string {
+	if len(input) == 0 {
+		return input
+	}
+
+	inputInrunes := []rune(input)
+	if unicode.IsLower(inputInrunes[0]) {
+		inputInrunes[0] = unicode.ToUpper(inputInrunes[0])
+	}
+
+	return string(inputInrunes)
+}
+
 func InterfaceToString(value interface{}) (string, error) {
 	if value == nil {
 		return "", fmt.Errorf("input is nil")

@@ -33,6 +33,7 @@ type Interface interface {
 	ResetPassword(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetAccessToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	EmailAccountCreationLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	CreateUserAccount(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type FriendRequest struct {

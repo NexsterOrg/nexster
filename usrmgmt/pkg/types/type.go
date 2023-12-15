@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 )
@@ -35,14 +36,35 @@ type AccountCreationLinkBody struct {
 	IndexNo string `json:"index" validate:"required"`
 }
 
+/*
+TODO: Validations & Transformations
+1. Convert last letter to simple.
+*/
+
 type LinkCreationParams struct {
 	IndexNo   string `json:"index" validate:"required"`
 	ExpiredAt string `json:"exp" validate:"required"`
 	Hmac      string `json:"hmac" validate:"required"`
 }
 
+type AccCreateBody struct {
+	FirstName  string `json:"firstName" validate:"required"`
+	SecondName string `json:"secondName" validate:"required"`
+	IndexNo    string `json:"index" validate:"required"`
+	ImageId    string `json:"imageId" validate:"required"`
+	Birthday   string `json:"birthday" validate:"required"`
+	Faculty    string `json:"faculty" validate:"required"`
+	Field      string `json:"field"`
+	Batch      string `json:"batch" validate:"required"`
+	About      string `json:"about"`
+	Gender     string `json:"gender" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	ExpiredAt  string `json:"exp" validate:"required"`
+	Hmac       string `json:"hmac" validate:"required"`
+}
+
 type UsrmgmtTypes interface {
-	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams
+	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams | AccCreateBody
 }
 
 // Generic function to read http req json body
@@ -112,4 +134,21 @@ func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 	}
 
 	return result
+}
+
+/* Account Creation Body
+validation & tranformation
+1. convert first letter for both names to upper case - done
+2. Convert last letter to simple. - done
+3. make sure birthday format is in 2000-01-01
+4. faculty & field validations
+5. gender - all letters should be simple - done
+*/
+
+func TransformToAccCreateData(data *AccCreateBody) *AccCreateBody {
+	data.Gender = strings.ToLower(data.Gender)
+	data.FirstName = ustr.FirstCharToUpper(data.FirstName)
+	data.SecondName = ustr.FirstCharToUpper(data.SecondName)
+	data.IndexNo = strings.ToLower(data.IndexNo)
+	return data
 }

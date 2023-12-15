@@ -4,6 +4,7 @@ import (
 	"context"
 
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
 )
 
 type Interface interface {
@@ -24,4 +25,5 @@ type Interface interface {
 	DeleteUser(ctx context.Context, userId string) error
 	ResetPassword(ctx context.Context, userKey, givenOldPasswd, newPasswd string) error
 	ValidatePasswordForToken(ctx context.Context, indexNo, givenPasswd string) (string, error)
+	CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error)
 }

@@ -691,6 +691,78 @@ func (s *server) ValidateLinkCreationParams(w http.ResponseWriter, r *http.Reque
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
+func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{"id": ""},
+	}
+
+	data, err := typ.ReadJsonBody[typ.AccCreateBody](r)
+	if err != nil {
+		s.logger.Infof("failed to create account: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to create account: required fields are not in req body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	data = typ.TransformToAccCreateData(data)
+
+	// hmac validation
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.ExpiredAt) {
+		s.logger.Info("failed to create account: hmac valdiation failed")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	expiredAt, err := ustr.StrToInt64(data.ExpiredAt)
+	if err != nil {
+		s.logger.Infof("failed to create account: %v", err)
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	if tm.HasUnixTimeExceeded(expiredAt) {
+		s.logger.Infof("failed to create account: link is expired")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	// Check account already exists or not
+	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), data.IndexNo)
+	if err != nil {
+		s.logger.Errorf("failed to create account: unable to get user key: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if userKey != "" {
+		s.logger.Info("failed to create account: account is already exist.")
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+
+	// Create user node
+	createdUserKey, err := s.scGraph.CreateUserNode(r.Context(), data)
+	if err != nil {
+		s.logger.Errorf("failed to create account: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusCreated, map[string]interface{}{
+		"state": success,
+		"data":  map[string]string{"id": createdUserKey},
+	})
+}
+
+/*
+TODO:
+1. faculty, field validations
+2. password validtion
+*/
+
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
 func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	subject := "482191" // TODO: change to user_key of authenticated user.

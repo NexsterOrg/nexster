@@ -15,8 +15,12 @@ import (
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
+	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
+	fac "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
+	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
 	authprv "github.com/NamalSanjaya/nexster/usrmgmt/pkg/auth_provider"
@@ -50,10 +54,18 @@ func main() {
 	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
 	argFrndClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
 	argUsrClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, usr.UsersColl)
+	argAvtrClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, avtr.AvatarColl)
+	argStudentClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, stdt.StudnetColl)
+	argFacultyClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fac.FacultyColl)
+	argHasGenderClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, hgen.HasGenderColl)
 
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
 	usrCtrler := usr.NewCtrler(argUsrClient)
+	avtrCtrler := avtr.NewCtrler(argAvtrClient)
+	stdtCtrler := stdt.NewCtrler(argStudentClient)
+	facCtrler := fac.NewCtrler(argFacultyClient)
+	hasGenCtrler := hgen.NewCtrler(argHasGenderClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
@@ -61,7 +73,7 @@ func main() {
 	// mail client
 	mailClient := umail.New(&configs.MailCfg)
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient)
 
 	router := httprouter.New()
@@ -106,6 +118,7 @@ func main() {
 	router.POST(authprv.AccessTokenPath, srv.GetAccessToken)
 	router.POST(authprv.AccountCreationLinkPath, srv.EmailAccountCreationLink)
 	router.POST(authprv.AccCreationLinkValidatePath, srv.ValidateLinkCreationParams)
+	router.POST(authprv.AccCreatePath, srv.CreateUserAccount)
 
 	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
 	router.PUT("/usrmgmt/profile/password", srv.ResetPassword)

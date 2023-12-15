@@ -10,11 +10,17 @@ import (
 
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
+	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
+	fac "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	gnd "github.com/NamalSanjaya/nexster/pkgs/models/genders"
+	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
+	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	pwd "github.com/NamalSanjaya/nexster/pkgs/utill/password"
 	strg "github.com/NamalSanjaya/nexster/pkgs/utill/string"
+	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
 )
 
 const userColl string = "users" // Need to be changed once `users` repo bring to common level
@@ -67,20 +73,29 @@ const getLoginInfoForIndxQry string = `FOR v IN users
 	RETURN {"key": v._key, "password":  v.password }`
 
 type socialGraph struct {
-	fReqCtrler   freq.Interface
-	frndCtrler   frnd.Interface
-	usrCtrler    usr.Interface
-	conentClient contapi.Interface
+	fReqCtrler      freq.Interface
+	frndCtrler      frnd.Interface
+	usrCtrler       usr.Interface
+	conentClient    contapi.Interface
+	avatarCtrler    avtr.Interface
+	studentCtrler   stdt.Interface
+	facultyCtrler   fac.Interface
+	hasGenderCtrler hgen.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface) *socialGraph {
+func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface, avtrIntfce avtr.Interface,
+	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface) *socialGraph {
 	return &socialGraph{
-		fReqCtrler:   frIntfce,
-		frndCtrler:   frndIntfce,
-		usrCtrler:    usrIntfce,
-		conentClient: contentIntfce,
+		fReqCtrler:      frIntfce,
+		frndCtrler:      frndIntfce,
+		usrCtrler:       usrIntfce,
+		conentClient:    contentIntfce,
+		avatarCtrler:    avtrIntfce,
+		studentCtrler:   stIntfce,
+		facultyCtrler:   facIntface,
+		hasGenderCtrler: hGenIntface,
 	}
 }
 
@@ -390,4 +405,88 @@ func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, indexNo, g
 		return "", errs.NewUnAuthError("password is not matched")
 	}
 	return strg.InterfaceToString(result["key"])
+}
+
+func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error) {
+	newPasswdHash, err := pwd.HashPassword(data.Password)
+	if err != nil {
+		return "", fmt.Errorf("failed to hash password: %v", err)
+	}
+	// TODO: data validation(birthday, faculty, field, batch, gender)
+	userKey, err := sgr.usrCtrler.CreateDocument(ctx, &usr.UserCreateInfo{
+		Key:        "",
+		FirstName:  data.FirstName,
+		SecondName: data.SecondName,
+		Username:   "",
+		IndexNo:    data.IndexNo,
+		Email:      "",
+		ImageUrl:   data.ImageId, // avatar/47193434.jpg
+		Birthday:   data.Birthday,
+		Faculty:    data.Faculty,
+		Field:      data.Field,
+		Batch:      data.Batch,
+		About:      data.About,
+		Gender:     data.Gender,
+		Password:   newPasswdHash,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create user document: %v", err)
+	}
+
+	value, ext, err := getExtensionAndNumber(data.ImageId)
+	if err != nil {
+		return "", fmt.Errorf("err parsing imageId: %v", err)
+	}
+	// Create avatar node
+	_, err = sgr.avatarCtrler.Create(ctx, &avtr.Avatar{
+		Key:    value,
+		Format: ext,
+		View:   avtr.PublicView,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create avatar node: %v", err)
+	}
+
+	// Create student edge
+	_, err = sgr.studentCtrler.Create(ctx, &stdt.Student{
+		Key:  "",
+		From: usr.MkUserDocId(userKey),
+		To:   sgr.facultyCtrler.MkFacultyDocId(strings.ToLower(data.Faculty)),
+		Kind: "",
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create student edge: %v", err)
+	}
+
+	// Create hasGender edge
+	_, err = sgr.hasGenderCtrler.Create(ctx, &hgen.HasGender{
+		Key:  "",
+		From: usr.MkUserDocId(userKey),
+		To:   gnd.MkGenderId(data.Gender), // TODO: Gender will go data transform
+		Kind: "",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to create hasGender edge: %v", err)
+	}
+
+	return userKey, nil
+}
+
+func getExtensionAndNumber(input string) (valuePart, extension string, err error) {
+	arr1 := strings.Split(input, ".")
+	if len(arr1) != 2 {
+		err = fmt.Errorf("invalid input")
+		return
+	}
+	extension = arr1[1]
+	arr2 := strings.Split(arr1[0], "/")
+
+	if len(arr2) != 2 {
+		err = fmt.Errorf("invalid input")
+		extension = ""
+		return
+	}
+	valuePart = arr2[1]
+	return
 }
