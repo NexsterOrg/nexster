@@ -16,6 +16,7 @@ type Interface interface {
 	ListUsersAnyJsonValue(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]interface{}, error)
 	UpdateUser(ctx context.Context, key string, updateFields map[string]interface{}) error
 	DeleteUser(ctx context.Context, key string) error
+	CreateDocument(ctx context.Context, doc *UserCreateInfo) (string, error)
 }
 
 // TODO:
@@ -41,9 +42,30 @@ type User struct {
 	Birthday   string `json:"birthday"`
 }
 
+// username, email
+
+type UserCreateInfo struct {
+	Key        string `json:"_key"`
+	FirstName  string `json:"firstName"`
+	SecondName string `json:"secondName"`
+	Username   string `json:"username"`
+	IndexNo    string `json:"index_no"`
+	Email      string `json:"email"`
+	ImageUrl   string `json:"image_url"`
+	Birthday   string `json:"birthday"`
+	Faculty    string `json:"faculty"`
+	Field      string `json:"field"`
+	Batch      string `json:"batch"`
+	About      string `json:"about"`
+	Gender     string `json:"gender"`
+	Password   string `json:"password"`
+}
+
 type UserRole int
 
 const (
 	Owner UserRole = iota
 	Viewer
 )
+
+const uniEmailExtension string = "uom.lk"

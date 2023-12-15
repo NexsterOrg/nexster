@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	driver "github.com/arangodb/go-driver"
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
+	utuid "github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 )
 
 type userCtrler struct {
@@ -49,6 +51,15 @@ func (uc *userCtrler) MkUserDocId(key string) string {
 // To use outside places without User instance
 func MkUserDocId(key string) string {
 	return fmt.Sprintf("%s/%s", UsersColl, key)
+}
+
+// Create username for a user
+func CreateUsername(firstName, secondName string) string {
+	return fmt.Sprintf("%s %s", firstName, secondName)
+}
+
+func CreateUniEmail(indexNo string) string {
+	return fmt.Sprintf("%s@%s", strings.ToLower(indexNo), uniEmailExtension)
 }
 
 // Return [{}, {}, {}]. json objects can have string type of values for fields.
@@ -160,4 +171,16 @@ func (uc *userCtrler) DeleteUser(ctx context.Context, key string) error {
 		return errs.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
 	}
 	return err
+}
+
+func (uc *userCtrler) CreateDocument(ctx context.Context, doc *UserCreateInfo) (string, error) {
+	doc.Key = utuid.GenUUID4()
+	doc.Username = CreateUsername(doc.FirstName, doc.SecondName)
+	doc.Email = CreateUniEmail(doc.IndexNo)
+
+	_, err := uc.argClient.Coll.CreateDocument(ctx, doc)
+	if err != nil {
+		return "", fmt.Errorf("failed to create user node: %v", err)
+	}
+	return doc.Key, nil
 }
