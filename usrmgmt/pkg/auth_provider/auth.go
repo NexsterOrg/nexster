@@ -2,7 +2,6 @@ package authprovider
 
 import (
 	"net/http"
-	"strings"
 
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 )
@@ -29,10 +28,10 @@ func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 
 	// TODO: temporty path to get token for development work
-	if strings.HasPrefix(urlPath, setTokenPath) {
-		ap.authCtrler.AuthDisabledServeHTTP(w, r)
-		return
-	}
+	// if strings.HasPrefix(urlPath, setTokenPath) {
+	// 	ap.authCtrler.AuthDisabledServeHTTP(w, r)
+	// 	return
+	// }
 	if urlPath == AccessTokenPath || urlPath == AccountCreationLinkPath || urlPath == AccCreationLinkValidatePath ||
 		urlPath == AccCreatePath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
