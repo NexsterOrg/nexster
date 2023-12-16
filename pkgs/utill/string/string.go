@@ -63,3 +63,12 @@ func ConvertBirthdayToCorrectFormat(bd string) string {
 	}
 	return ""
 }
+
+func IsInArray(arr []string, id string) bool {
+	for _, element := range arr {
+		if element == id {
+			return true
+		}
+	}
+	return false
+}
