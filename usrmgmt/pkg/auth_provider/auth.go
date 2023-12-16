@@ -11,7 +11,7 @@ const (
 	AccountCreationLinkPath     string = "/usrmgmt/auth/reg-link"
 	AccCreationLinkValidatePath string = "/usrmgmt/auth/reg-link/validate"
 	AccCreatePath               string = "/usrmgmt/auth/reg"
-	setTokenPath                string = "/usrmgmt/set-token/"
+	// setTokenPath                string = "/usrmgmt/set-token/"
 )
 
 type authProvider struct {
