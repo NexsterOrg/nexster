@@ -402,6 +402,9 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", pfGender, err)
 	}
 	for _, pfUser := range pfUsers {
+		if (*pfUser)["key"] == "" {
+			continue
+		}
 		score := sgr.facRepo.GetPriority(strings.ToLower((*pfUser)["faculty"]), pfGender, facWithGender) * ageMatch((*pfUser)["birthday"], birthday, pfGender, gender)
 		(*pfUser)["score"] = strconv.Itoa(score)
 	}
@@ -426,6 +429,9 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", gender, err)
 	}
 	for _, otherUser := range otherUsers {
+		if (*otherUser)["key"] == "" {
+			continue
+		}
 		score := sgr.facRepo.GetPriority(strings.ToLower((*otherUser)["faculty"]), gender, facWithGender) * ageMatch((*otherUser)["birthday"], birthday, gender, gender)
 		(*otherUser)["score"] = strconv.Itoa(score)
 	}

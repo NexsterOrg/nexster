@@ -150,5 +150,6 @@ func TransformToAccCreateData(data *AccCreateBody) *AccCreateBody {
 	data.FirstName = ustr.FirstCharToUpper(data.FirstName)
 	data.SecondName = ustr.FirstCharToUpper(data.SecondName)
 	data.IndexNo = strings.ToLower(data.IndexNo)
+	data.Birthday = ustr.ConvertBirthdayToCorrectFormat(data.Birthday)
 	return data
 }

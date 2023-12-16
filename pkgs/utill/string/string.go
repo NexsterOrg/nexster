@@ -3,6 +3,7 @@ package string
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -53,4 +54,12 @@ func StrToInt64(s string) (int64, error) {
 		return 0, err
 	}
 	return num, nil
+}
+
+func ConvertBirthdayToCorrectFormat(bd string) string {
+	arr := strings.Split(bd, "T")
+	if len(arr) >= 1 {
+		return arr[0]
+	}
+	return ""
 }

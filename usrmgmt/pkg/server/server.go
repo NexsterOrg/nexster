@@ -759,8 +759,8 @@ func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ htt
 
 /*
 TODO:
-1. faculty, field validations
-2. password validtion
+1. faculty, field, birthday, gender & batch validations
+2. password validation. (eg: minLen>8)
 */
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
