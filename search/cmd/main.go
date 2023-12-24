@@ -72,7 +72,7 @@ func main() {
 	router.GET("/search/users", srv.SearchForUser)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000", "http://20.197.49.204:3000"},
+		AllowedOrigins:     []string{"http://localhost:3000", "http://192.168.1.101:3000", "http://20.197.12.219:3000"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
