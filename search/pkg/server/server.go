@@ -52,6 +52,8 @@ func (s *server) SearchForUser(w http.ResponseWriter, r *http.Request, _ httprou
 	for _, each := range results {
 		state, reqId, err := s.scGraph.AttachFriendState(r.Context(), userKey, (*each)["key"])
 		if err != nil {
+			// TODO:
+			// Remove this one from results
 			s.logger.Errorf("failed at search for user: error found during attaching friend state: %v: userKey=%s, friendKey=%s\n", err, userKey, (*each)["key"])
 			continue
 		}
