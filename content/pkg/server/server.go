@@ -126,7 +126,7 @@ func (s *server) CreateImgUrl(w http.ResponseWriter, r *http.Request, p httprout
 	namespace := p.ByName("namespace") // eg: avatar, post, poster
 	imgId := p.ByName("imgId")         // eg: 1348502.png
 	rndTimestamp := strconv.Itoa(rand.Intn(10000))
-	imgUrl := fmt.Sprintf("%s/content/images/%s/%s?%s=%s&%s=%s&%s=%s", s.config.Url, namespace, imgId,
+	imgUrl := fmt.Sprintf("%s/g/c/images/%s/%s?%s=%s&%s=%s&%s=%s", s.config.Url, namespace, imgId,
 		permission, r.URL.Query().Get(permission),
 		timestamp, rndTimestamp,
 		imageHMac, hmac.CalculateHMAC(s.config.SecretImgKey,
