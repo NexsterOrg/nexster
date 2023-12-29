@@ -79,7 +79,7 @@ func main() {
 	router := httprouter.New()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:     []string{"http://localhost:3000", "https://exp-mora-nexster.azurewebsites.net"},
+		AllowedOrigins:     []string{"http://localhost:3000", "https://nexster.xyz"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},

@@ -12,8 +12,9 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-const publicKeyPemFile string = "path-to-public_key.pem"
-const privateKeyPemFile string = "path-to-private_key_pkcs8.pem"
+// /home/azureuser/be/nexster/configs/auth (remote)
+const publicKeyPemFile string = "/home/azureuser/be/nexster/configs/auth/public_key.pem"
+const privateKeyPemFile string = "/home/azureuser/be/nexster/configs/auth/private_key_pkcs8.pem"
 
 type jwtUserKeyType string
 

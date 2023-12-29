@@ -89,7 +89,7 @@ func main() {
 	router.DELETE("/space/events/:eventKey", srv.DeleteEventFromSpace)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:     []string{"http://localhost:3000", "https://exp-mora-nexster.azurewebsites.net"},
+		AllowedOrigins:     []string{"http://localhost:3000", "https://nexster.xyz"},
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
