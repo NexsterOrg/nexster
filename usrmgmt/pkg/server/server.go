@@ -602,12 +602,12 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 
 	// experimental purpose. Restricing users - TODO: REMOVE THIS...
 	// test users (namal, asiri, hiroshan, idunil, dileesha, ishan, santhusa)
-	testUsers := []string{"180173f", "180609b", "180245e", "180653d", "180301a", "180172c", "180326e", "180237g"}
-	if !ustr.IsInArray(testUsers, data.IndexNo) {
-		s.logger.Infof("failed to send account creation link: user is not allow to create accounts: indexNo=%s", data.IndexNo)
-		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
-		return
-	}
+	// testUsers := []string{"180173f", "180609b", "180245e", "180653d", "180301a", "180172c", "180326e", "180237g"}
+	// if !ustr.IsInArray(testUsers, data.IndexNo) {
+	// 	s.logger.Infof("failed to send account creation link: user is not allow to create accounts: indexNo=%s", data.IndexNo)
+	// 	s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+	// 	return
+	// }
 
 	if err != nil {
 		s.logger.Infof("failed to send account creation link: failed to read request body: %v", err)
