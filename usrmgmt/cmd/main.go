@@ -79,7 +79,7 @@ func main() {
 	router := httprouter.New()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:     []string{"http://localhost:3000", "https://nexster.xyz"},
+		AllowedOrigins:     configs.Server.AllowedOrigins,
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},

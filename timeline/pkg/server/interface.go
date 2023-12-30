@@ -19,6 +19,10 @@ const Date string = "Date"
 // message body information - ContentType
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
+type ServerConfig struct {
+	AllowedOrigins []string `yaml:"allowedOrigins"`
+}
+
 type Interface interface {
 	ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendSuggestions(w http.ResponseWriter, r *http.Request, _ httprouter.Params)

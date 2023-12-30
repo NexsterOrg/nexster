@@ -52,7 +52,8 @@ type FriendReqAcceptance struct {
 }
 
 type ServerConfig struct {
-	SecretHmacKey  string `yaml:"secretHmacKey"`
-	FrontendDomain string `yaml:"frontendDomain"`
-	FrontendPath   string `yaml:"frontendPath"`
+	SecretHmacKey  string   `yaml:"secretHmacKey"`
+	FrontendDomain string   `yaml:"frontendDomain"`
+	FrontendPath   string   `yaml:"frontendPath"`
+	AllowedOrigins []string `yaml:"allowedOrigins"`
 }

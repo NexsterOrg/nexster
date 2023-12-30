@@ -14,8 +14,9 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type ServerConfig struct {
-	SecretImgKey string `yaml:"secretImgKey"`
-	Url          string `yaml:"url"`
+	SecretImgKey   string   `yaml:"secretImgKey"`
+	Url            string   `yaml:"url"`
+	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
 
 type Interface interface {

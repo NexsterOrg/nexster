@@ -6,6 +6,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type ServerConfig struct {
+	AllowedOrigins []string `yaml:"allowedOrigins"`
+}
+
 type Interface interface {
 	CreateEventInSpace(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListUpcomingEventsFromSpace(w http.ResponseWriter, r *http.Request, _ httprouter.Params)

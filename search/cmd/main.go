@@ -23,6 +23,7 @@ import (
 )
 
 type Configs struct {
+	Server           spsrv.ServerConfig  `yaml:"server"`
 	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
 	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
 }
@@ -72,13 +73,12 @@ func main() {
 	router.GET("/search/users", srv.SearchForUser)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:     []string{"http://localhost:3000", "https://nexster.xyz"},
+		AllowedOrigins:     configs.Server.AllowedOrigins,
 		AllowCredentials:   true,
 		AllowedMethods:     []string{"GET", "POST", "PUT", "OPTIONS", "DELETE"},
 		AllowedHeaders:     []string{"Authorization", "Content-Type"},
 		OptionsPassthrough: true,
-		// Enable Debugging for testing, consider disabling in production
-		Debug: false,
+		Debug:              false,
 	})
 
 	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
