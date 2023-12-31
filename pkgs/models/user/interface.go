@@ -40,6 +40,7 @@ type User struct {
 	SecondName string `json:"secondName"`
 	Gender     string `json:"gender"`
 	Birthday   string `json:"birthday"`
+	IndexNo    string `json:"index_no"`
 }
 
 // username, email

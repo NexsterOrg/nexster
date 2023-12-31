@@ -89,7 +89,7 @@ const getUserKey string = `FOR user IN users
 // TODO: Add FILTER v._key != userKey
 const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 	FILTER v._key != @userKey
-	RETURN  { "key": v._key, "username": v.username, "image_url": v.image_url, "batch": v.batch, 
+	RETURN  { "key": v._key, "username": v.username, "image_url": v.image_url, "batch": v.batch, "indexNo": v.index_no,
 		"field": v.field, "faculty": v.faculty, "birthday" : v.birthday, "gender" : v.gender}`
 
 const rmMediaOwnerEdge = `FOR edge IN mediaOwnerEdges
@@ -175,7 +175,7 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 		}
 
 		posts = append(posts, &map[string]interface{}{
-			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "image_url": imgUrl},
+			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "image_url": imgUrl, "indexNo": user.IndexNo},
 			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
 				"laugh": viewersReacts.Laugh},
 		})

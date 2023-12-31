@@ -52,7 +52,7 @@ const listFriendReqs string = `FOR v,e IN 1..1 INBOUND
 	SORT e.req_date DESC
 	LIMIT @offset, @count
 	RETURN { "user_key": v._key, "username" : v.username, "image_url" : v.image_url, 
-	"batch": v.batch,"faculty": v.faculty, "field" : v.field, 
+	"batch": v.batch,"faculty": v.faculty, "field" : v.field, "indexNo": v.index_no,
 	"req_date": e.req_date, "req_key": e._key }`
 
 const allFriendReqsCountQry string = `FOR doc IN friendRequest
