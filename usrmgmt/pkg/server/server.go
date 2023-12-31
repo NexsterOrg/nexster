@@ -12,6 +12,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	lg "github.com/labstack/gommon/log"
 
+	gjwt "github.com/NamalSanjaya/nexster/pkgs/auth/gen_jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
@@ -50,16 +51,18 @@ type server struct {
 	scGraph    socigr.Interface
 	logger     *lg.Logger
 	mailClient umail.Interface
+	tokenGen   gjwt.Interface
 }
 
 var _ Interface = (*server)(nil)
 
-func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, mailIntfce umail.Interface) *server {
+func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, mailIntfce umail.Interface, jwtTokenGen gjwt.Interface) *server {
 	return &server{
 		config:     cfg,
 		scGraph:    sgrInterface,
 		logger:     logger,
 		mailClient: mailIntfce,
+		tokenGen:   jwtTokenGen,
 	}
 }
 
@@ -417,7 +420,7 @@ func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprout
 		return
 	}
 	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	token, err := jwt.GenJwtToken(authProvider, userId, aud)
+	token, err := s.tokenGen.GenJwtToken(userId, aud)
 
 	if err != nil {
 		// log the error
@@ -578,7 +581,7 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	accessToken, err := jwt.GenJwtToken(authProvider, userKey, aud)
+	accessToken, err := s.tokenGen.GenJwtToken(userKey, aud)
 
 	if err != nil {
 		s.logger.Errorf("failed get access token: %v", err)
@@ -772,31 +775,6 @@ TODO:
 1. faculty, field, birthday, gender & batch validations
 2. password validation. (eg: minLen>8)
 */
-
-// TODO: This endpoint handler should be removed when the login logic handler implemented.
-func (s *server) SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	subject := "482191" // TODO: change to user_key of authenticated user.
-	aud := []string{authProvider, timeline}
-	token, err := jwt.GenJwtToken(authProvider, subject, aud)
-
-	if err != nil {
-		// log the error
-		s.logger.Errorf("falied to Set-cookie: %v", err)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: token,
-		// Secure:   true, // TODO: Enable Secure: true, once you have the https connection.
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/", // Cookie is valid for all paths
-		MaxAge:   600, // Valid only for 10min (only in development)
-	})
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("New jwt token enabled...!"))
-}
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 	data := &FriendRequest{}

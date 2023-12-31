@@ -23,7 +23,6 @@ type Interface interface {
 	ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	GetProfile(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params)
-	SetCookie(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
@@ -55,5 +54,8 @@ type ServerConfig struct {
 	SecretHmacKey  string   `yaml:"secretHmacKey"`
 	FrontendDomain string   `yaml:"frontendDomain"`
 	FrontendPath   string   `yaml:"frontendPath"`
+	ProjectDir     string   `yaml:"projectDir"`
+	PublicKeyPath  string   `yaml:"publicKeyPath"`
+	PrivateKeyPath string   `yaml:"privateKeyPath"`
 	AllowedOrigins []string `yaml:"allowedOrigins"`
 }

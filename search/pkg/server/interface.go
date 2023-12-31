@@ -7,6 +7,8 @@ import (
 )
 
 type ServerConfig struct {
+	ProjectDir     string   `yaml:"projectDir"`
+	PublicKeyPath  string   `yaml:"publicKeyPath"`
 	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
 

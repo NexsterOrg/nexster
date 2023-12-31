@@ -19,6 +19,7 @@ import (
 	erec "github.com/NamalSanjaya/nexster/pkgs/models/event_reaction"
 	pb "github.com/NamalSanjaya/nexster/pkgs/models/posted_by"
 	"github.com/NamalSanjaya/nexster/pkgs/models/user"
+	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	rp "github.com/NamalSanjaya/nexster/space/pkg/repository"
 	spsrv "github.com/NamalSanjaya/nexster/space/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/space/pkg/social_graph"
@@ -98,7 +99,7 @@ func main() {
 		Debug:              false,
 	})
 
-	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PublicKeyPath))
 	handler := c.Handler(jwtHandler)
 	log.Println("space_server - Listen 8003.....")
 	log.Fatal(http.ListenAndServe(":8003", handler))

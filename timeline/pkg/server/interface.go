@@ -20,6 +20,8 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type ServerConfig struct {
+	ProjectDir     string   `yaml:"projectDir"`
+	PublicKeyPath  string   `yaml:"publicKeyPath"`
 	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
 

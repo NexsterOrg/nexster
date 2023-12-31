@@ -22,6 +22,7 @@ import (
 	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
@@ -100,7 +101,7 @@ func main() {
 		Debug:              false,
 	})
 
-	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PublicKeyPath))
 	handler := c.Handler(jwtHandler)
 	log.Println("timeline_server - Listen 8001.....")
 	log.Fatal(http.ListenAndServe(":8001", handler))

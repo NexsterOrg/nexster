@@ -17,6 +17,7 @@ import (
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	rp "github.com/NamalSanjaya/nexster/search/pkg/repository"
 	spsrv "github.com/NamalSanjaya/nexster/search/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/search/pkg/social_graph"
@@ -81,7 +82,7 @@ func main() {
 		Debug:              false,
 	})
 
-	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router)
+	jwtHandler := jwtAuth.NewHandler(issuer, asAud, router, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PublicKeyPath))
 	handler := c.Handler(jwtHandler)
 	log.Println("search_engine_server - Listen 8004.....")
 	log.Fatal(http.ListenAndServe(":8004", handler))
