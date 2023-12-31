@@ -6,3 +6,5 @@ go.sum
 /usrmgmt/configs
 /space/configs
 /search/configs
+*.log
+/logs
