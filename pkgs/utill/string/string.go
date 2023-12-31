@@ -72,3 +72,7 @@ func IsInArray(arr []string, id string) bool {
 	}
 	return false
 }
+
+func MkCompletePath(rootDir, relPath string) string {
+	return fmt.Sprintf("%s/%s", rootDir, relPath)
+}

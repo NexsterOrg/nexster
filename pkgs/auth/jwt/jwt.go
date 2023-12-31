@@ -7,14 +7,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )
-
-// /home/azureuser/be/nexster/configs/auth (remote)
-const publicKeyPemFile string = "/home/azureuser/be/nexster/configs/auth/public_key.pem"
-const privateKeyPemFile string = "/home/azureuser/be/nexster/configs/auth/private_key_pkcs8.pem"
 
 type jwtUserKeyType string
 
@@ -27,15 +22,21 @@ type JwtAuthHandler struct {
 	handler    http.Handler
 	issuer     string
 	asAudience string
+	publicKey  []byte
 }
 
 var _ Interface = (*JwtAuthHandler)(nil)
 
-func NewHandler(iss string, asAud string, h http.Handler) *JwtAuthHandler {
+func NewHandler(iss string, asAud string, h http.Handler, publicKeyPath string) *JwtAuthHandler {
+	publicKey, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Panicf("failed to read publicKey file: %v", err)
+	}
 	return &JwtAuthHandler{
 		issuer:     iss,
 		asAudience: asAud,
 		handler:    h,
+		publicKey:  publicKey,
 	}
 }
 
@@ -49,7 +50,6 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	// "token" is not found in cookies
 	if jwtToken == "" {
 		log.Println("No Authorization header is provided") // TODO: remove in productiono environemtn
 		w.WriteHeader(http.StatusUnauthorized)
@@ -68,12 +68,7 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 	// TODO: Need to think about how to read and share same public key acorss components
-	key, err := os.ReadFile(publicKeyPemFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read public key pem file: %v", err)
-	}
-
-	publicKey, err := jwt.ParseECPublicKeyFromPEM(key)
+	publicKey, err := jwt.ParseECPublicKeyFromPEM(jah.publicKey)
 	if err != nil {
 		return "", fmt.Errorf("failed parse EC public key: %v", err)
 	}
@@ -122,30 +117,4 @@ func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 	}
 
 	return claims["sub"].(string), nil
-}
-
-// This is not a capability of Auth Handler. This is only used by usrmgmt server to generate jwt token.
-func GenJwtToken(issuer, subject string, audience []string) (string, error) {
-	privateKey, err := os.ReadFile(privateKeyPemFile)
-	if err != nil {
-		return "", err
-	}
-
-	key, err := jwt.ParseECPrivateKeyFromPEM(privateKey)
-	if err != nil {
-		return "", err
-	}
-
-	t := jwt.NewWithClaims(jwt.SigningMethodES256,
-		jwt.MapClaims{
-			"iss": issuer,
-			"sub": subject,
-			"aud": audience,
-			"exp": time.Now().Add(12 * time.Hour).Unix(), // 12hr valid time
-		})
-	signedToken, err := t.SignedString(key)
-	if err != nil {
-		return "", err
-	}
-	return signedToken, nil
 }
