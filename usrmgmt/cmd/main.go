@@ -75,7 +75,7 @@ func main() {
 	// mail client
 	mailClient := umail.New(&configs.MailCfg)
 
-	jwtTokenGenarator := gjwt.NewGenerator(issuer, configs.Server.PrivateKeyPath)
+	jwtTokenGenarator := gjwt.NewGenerator(issuer, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PrivateKeyPath))
 
 	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient, jwtTokenGenarator)
