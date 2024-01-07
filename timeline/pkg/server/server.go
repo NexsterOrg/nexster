@@ -576,10 +576,6 @@ func (s *server) DeleteImagePost(w http.ResponseWriter, r *http.Request, p httpr
 	})
 }
 
-/**
-A. check the permission
-**/
-
 func (s *server) setResponseHeaders(w http.ResponseWriter, statusCode int, headers map[string]string) {
 	for key, val := range headers {
 		w.Header().Add(key, val)

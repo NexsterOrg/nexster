@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PROJECT_ROOT_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster
-LOGS_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster/logs
+PROJECT_ROOT_DIR=path-to-nexster-backend-repo
+LOGS_DIR=path-to-log-directory
 
 cd $PROJECT_ROOT_DIR
 
@@ -31,3 +31,5 @@ nohup go run main.go > $LOGS_DIR/timeline_server.log 2>&1 &
 # Run usrmgmt server
 cd ../../usrmgmt/cmd
 nohup go run main.go > $LOGS_DIR/usrmgmt_server.log 2>&1 &
+
+echo "--done--"

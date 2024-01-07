@@ -16,6 +16,7 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	"github.com/NamalSanjaya/nexster/pkgs/crypto/hmac"
 	"github.com/NamalSanjaya/nexster/pkgs/errors"
+	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
 	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	tm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
@@ -391,23 +392,25 @@ func (s *server) GetFriendsCount(w http.ResponseWriter, r *http.Request, p httpr
 // owner permission
 func (s *server) GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	indexNo := p.ByName("index_no")
-	headers := map[string]string{
-		ContentType: ApplicationJson_Utf8,
-		Date:        "",
-	}
 	respBody := map[string]interface{}{
 		"state": failed,
-		"data":  map[string]string{"key": ""},
+		"data":  map[string]interface{}{"key": "", "isOwner": false},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Info("failed to create event reaction: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
 	}
 	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), indexNo)
 	if err != nil {
 		s.logger.Errorf("failed to get userKey for given indexNo=%s: %v", indexNo, err)
-		s.sendRespMsg(w, http.StatusInternalServerError, headers, respBody)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
 	respBody["state"] = success
-	respBody["data"] = map[string]string{"key": userKey}
-	s.sendRespMsg(w, http.StatusOK, headers, respBody)
+	respBody["data"] = map[string]interface{}{"key": userKey, "isOwner": jwtUserKey == userKey}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
 
 // TODO: This endpoint handler should be removed when the login logic handler implemented.
