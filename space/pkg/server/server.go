@@ -48,6 +48,7 @@ func (s *server) CreateEventInSpace(w http.ResponseWriter, r *http.Request, p ht
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
+	// TODO: Create a validator instance, instead of create validator everytime with New().
 	if err = vdtor.New().Struct(data); err != nil {
 		s.logger.Infof("failed to create event: some mandadary fields are missing in request body: %v", err)
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
@@ -197,7 +198,7 @@ func (s *server) CreateEventReaction(w http.ResponseWriter, r *http.Request, p h
 	if err != nil {
 		s.logger.Infof("failed to create event reaction: %v", err)
 		status := http.StatusInternalServerError
-		if errors.IsNotConflictError(err) {
+		if errors.IsConflictError(err) {
 			status = http.StatusConflict
 		} else if errors.IsNotFoundError(err) {
 			status = http.StatusNotFound

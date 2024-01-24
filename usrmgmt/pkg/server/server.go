@@ -46,6 +46,7 @@ const timeline string = "timeline"
 const spaceAsAud string = "space"
 const imageAsAud string = "image"
 const searchAsAud string = "search"
+const bdFinderAsAud string = "bdFinder"
 
 type server struct {
 	config     *ServerConfig
@@ -413,31 +414,6 @@ func (s *server) GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p h
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
 
-// TODO: This endpoint handler should be removed when the login logic handler implemented.
-func (s *server) SetAuthToken(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	userId := p.ByName("user_id")
-	if userId == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("failed: userid is missing"))
-		s.logger.Error("falied to Set-cookie: user_id is missing")
-		return
-	}
-	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	token, err := s.tokenGen.GenJwtToken(userId, aud)
-
-	if err != nil {
-		// log the error
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("failed: server failed to generate a token"))
-		s.logger.Errorf("falied to Set-cookie: %v", err)
-		return
-	}
-
-	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Authorization header set in response"))
-}
-
 func (s *server) EditBasicProfileInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{"state": failed}
 	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
@@ -528,7 +504,7 @@ func (s *server) ResetPassword(w http.ResponseWriter, r *http.Request, _ httprou
 		s.sendRespDefault(w, http.StatusNotFound, respBody)
 		return
 	}
-	if errors.IsNotConflictError(err) {
+	if errors.IsConflictError(err) {
 		s.logger.Infof("failed reset password: many users exist with usere key=%s: %v", jwtUserKey, err)
 		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
@@ -560,7 +536,7 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	// if validate success, this will return relavent user key.
-	userKey, err := s.scGraph.ValidatePasswordForToken(r.Context(), data.IndexNo, data.Password)
+	userKey, roles, err := s.scGraph.ValidatePasswordForToken(r.Context(), data.Id, data.Password, data.Consumer)
 
 	if errors.IsUnAuthError(err) {
 		s.logger.Infof("failed get access token: %v", err)
@@ -572,8 +548,8 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 		s.sendRespDefault(w, http.StatusNotFound, respBody)
 		return
 	}
-	if errors.IsNotConflictError(err) {
-		s.logger.Infof("failed get access token: many users exist with index no=%s: %v", data.IndexNo, err)
+	if errors.IsConflictError(err) {
+		s.logger.Infof("failed get access token: many users exist with index no=%s: %v", data.Id, err)
 		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
 	}
@@ -582,9 +558,13 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-
-	aud := []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
-	accessToken, err := s.tokenGen.GenJwtToken(userKey, aud)
+	aud := []string{}
+	if data.Consumer == typ.Student {
+		aud = []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
+	} else if data.Consumer == typ.BoardingOwner {
+		aud = []string{bdFinderAsAud}
+	}
+	accessToken, err := s.tokenGen.GenJwtToken(userKey, roles, aud)
 
 	if err != nil {
 		s.logger.Errorf("failed get access token: %v", err)

@@ -24,6 +24,6 @@ type Interface interface {
 	UpdateUser(ctx context.Context, userId string, data map[string]interface{}) error
 	DeleteUser(ctx context.Context, userId string) error
 	ResetPassword(ctx context.Context, userKey, givenOldPasswd, newPasswd string) error
-	ValidatePasswordForToken(ctx context.Context, indexNo, givenPasswd string) (string, error)
+	ValidatePasswordForToken(ctx context.Context, id, givenPasswd, consumerType string) (userKey string, roles []string, err error)
 	CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error)
 }

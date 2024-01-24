@@ -23,7 +23,6 @@ type Interface interface {
 	ListFriendInfo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	GetProfile(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	GetFriendsCount(w http.ResponseWriter, r *http.Request, p httprouter.Params)
-	SetAuthToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetUserKeyByIndexNo(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetAllFriendReqsCount(w http.ResponseWriter, r *http.Request, _ httprouter.Params)

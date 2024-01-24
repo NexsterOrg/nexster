@@ -11,6 +11,7 @@ import (
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
 	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
+	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
 	fac "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -70,7 +71,11 @@ const getPasswordQry string = `FOR v IN users
 
 const getLoginInfoForIndxQry string = `FOR v IN users
 	filter v.index_no == @givenIndexNo
-	RETURN {"key": v._key, "password":  v.password }`
+	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
+
+const getBdOwnersForLogin string = `FOR v IN boardingOwners
+	filter v.mainContact == @mainContact
+	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
 
 type socialGraph struct {
 	fReqCtrler      freq.Interface
@@ -81,12 +86,13 @@ type socialGraph struct {
 	studentCtrler   stdt.Interface
 	facultyCtrler   fac.Interface
 	hasGenderCtrler hgen.Interface
+	bdOwnerCtrler   bdo.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface, avtrIntfce avtr.Interface,
-	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface) *socialGraph {
+	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface, bdOwnerIntfce bdo.Interface) *socialGraph {
 	return &socialGraph{
 		fReqCtrler:      frIntfce,
 		frndCtrler:      frndIntfce,
@@ -96,6 +102,7 @@ func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce
 		studentCtrler:   stIntfce,
 		facultyCtrler:   facIntface,
 		hasGenderCtrler: hGenIntface,
+		bdOwnerCtrler:   bdOwnerIntfce,
 	}
 }
 
@@ -378,33 +385,57 @@ func (sgr *socialGraph) ResetPassword(ctx context.Context, userKey, givenOldPass
 	})
 }
 
-// if password is match userKey, if not UnAuth error will be returned. return (userKey string, err error)
-func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, indexNo, givenPasswd string) (string, error) {
-	results, err := sgr.usrCtrler.ListUsersAnyJsonValue(ctx, getLoginInfoForIndxQry, map[string]interface{}{
-		"givenIndexNo": indexNo,
-	})
+// if password is match userKey, if not UnAuth error will be returned.
+func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, id, givenPasswd, consumerType string) (userKey string, roles []string, err error) {
+	roles = []string{}
+	results := []*map[string]interface{}{}
+
+	if consumerType == typ.Student {
+		results, err = sgr.usrCtrler.ListUsersAnyJsonValue(ctx, getLoginInfoForIndxQry, map[string]interface{}{
+			"givenIndexNo": id, // id --> index no for student consumer.
+		})
+	} else if consumerType == typ.BoardingOwner {
+		results, err = sgr.bdOwnerCtrler.ListAnyJsonValue(ctx, getBdOwnersForLogin, map[string]interface{}{
+			"mainContact": id, // id --> main contact phone no for boarding owner consumer.
+		})
+	} else {
+		err = fmt.Errorf("invalid consumer type given, %s", consumerType)
+		return
+	}
+
 	if err != nil {
-		return "", err
+		return
 	}
 
 	ln := len(results)
 	if ln == 0 {
-		return "", errs.NewNotFoundError(fmt.Sprintf("user with indexNo %s is not found", indexNo))
+		err = errs.NewNotFoundError(fmt.Sprintf("user is not found: id=%s, consumerType=%s", id, consumerType))
+		return
 	}
 	if ln > 1 {
-		return "", errs.NewConflictError(fmt.Sprintf("more than one user found for user indexNo=%s", indexNo))
+		err = errs.NewConflictError(fmt.Sprintf("more than one user found: id=%s, consumerType=%s", id, consumerType))
+		return
 	}
 	result := *results[0]
 
 	curPasswdHash, err := strg.InterfaceToString(result["password"])
 	if err != nil {
-		return "", fmt.Errorf("password is not found: %v", err)
+		err = fmt.Errorf("password is not found: %v", err)
+		return
 	}
 
 	if !pwd.CheckPasswordHash(givenPasswd, curPasswdHash) {
-		return "", errs.NewUnAuthError("password is not matched")
+		err = errs.NewUnAuthError("password is not matched")
+		return
 	}
-	return strg.InterfaceToString(result["key"])
+	// get user key
+	userKey, err = strg.InterfaceToString(result["key"])
+	if err != nil {
+		return
+	}
+	// get roles array
+	roles, err = strg.InterfaceToStringArray(result["roles"])
+	return
 }
 
 func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error) {

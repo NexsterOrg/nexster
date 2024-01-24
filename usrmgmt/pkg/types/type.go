@@ -11,6 +11,10 @@ import (
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 )
 
+const Student string = "student"
+const BoardingOwner string = "bdOwner"
+const Member string = "member"
+
 type Profile struct {
 	About      string `json:"about"`
 	FirstName  string `json:"firstName"`
@@ -28,8 +32,9 @@ type PasswordResetInfo struct {
 }
 
 type AccessTokenBody struct {
-	IndexNo  string `json:"index" validate:"required"`
+	Id       string `json:"id" validate:"required"`
 	Password string `json:"passwd" validate:"required"`
+	Consumer string `json:"consumer" validate:"required,oneof=student bdOwner member"` // token consumer types
 }
 
 type AccountCreationLinkBody struct {

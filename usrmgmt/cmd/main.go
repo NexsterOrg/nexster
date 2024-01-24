@@ -17,6 +17,7 @@ import (
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
+	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
 	fac "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
@@ -60,6 +61,7 @@ func main() {
 	argStudentClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, stdt.StudnetColl)
 	argFacultyClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fac.FacultyColl)
 	argHasGenderClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, hgen.HasGenderColl)
+	argBdOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, bdo.BdOwnerColl)
 
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
@@ -68,6 +70,7 @@ func main() {
 	stdtCtrler := stdt.NewCtrler(argStudentClient)
 	facCtrler := fac.NewCtrler(argFacultyClient)
 	hasGenCtrler := hgen.NewCtrler(argHasGenderClient)
+	bdOwnerCtrler := bdo.NewCtrler(argBdOwnerClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
@@ -77,7 +80,7 @@ func main() {
 
 	jwtTokenGenarator := gjwt.NewGenerator(issuer, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PrivateKeyPath))
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient, jwtTokenGenarator)
 
 	router := httprouter.New()
@@ -103,7 +106,6 @@ func main() {
 
 	router.GET("/usrmgmt/all/friends", srv.ListFriendInfo)
 	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
-	router.GET("/usrmgmt/set-token/:user_id", srv.SetAuthToken)
 
 	router.GET("/usrmgmt/indexnos/:index_no", srv.GetUserKeyByIndexNo)
 	router.GET("/usrmgmt/users/:user_id", srv.GetProfile)
