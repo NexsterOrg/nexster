@@ -8,3 +8,4 @@ go.sum
 /search/configs
 *.log
 /logs
+/*/configs
