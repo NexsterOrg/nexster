@@ -1,5 +1,5 @@
 package genjwt
 
 type Interface interface {
-	GenJwtToken(subject string, audience []string) (string, error)
+	GenJwtToken(subject string, roles, audience []string) (string, error)
 }

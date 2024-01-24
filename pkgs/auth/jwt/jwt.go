@@ -9,11 +9,15 @@ import (
 	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+
+	strg "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 )
 
 type jwtUserKeyType string
+type rolesType string
 
 const JwtUserKey jwtUserKeyType = "user_key"
+const roles rolesType = "roles"
 
 // Responsibilities
 // Extract the JWT token, Validate sign/algo, validate claims, direct request to signup/signin pages if validation failed.
@@ -55,22 +59,25 @@ func (jah *JwtAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	subject, err := jah.validateToken(jwtToken)
+	subject, roleList, err := jah.validateToken(jwtToken)
 	// jwt token is invalid
 	if err != nil {
 		log.Println("failed to validate token: ", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	ctx1 := context.WithValue(r.Context(), JwtUserKey, subject)
 	// shallow copy of req with user_key
-	jah.handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), JwtUserKey, subject)))
+	jah.handler.ServeHTTP(w, r.WithContext(context.WithValue(ctx1, roles, roleList)))
 }
 
-func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
+func (jah *JwtAuthHandler) validateToken(tokenString string) (userKey string, roleList []string, err error) {
 	// TODO: Need to think about how to read and share same public key acorss components
+	roleList = []string{}
 	publicKey, err := jwt.ParseECPublicKeyFromPEM(jah.publicKey)
 	if err != nil {
-		return "", fmt.Errorf("failed parse EC public key: %v", err)
+		err = fmt.Errorf("failed parse EC public key: %v", err)
+		return
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -82,21 +89,25 @@ func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 
 	// Can be due to expiration of JWT
 	if err != nil {
-		return "", fmt.Errorf("failed to parse: %v", err)
+		err = fmt.Errorf("failed to parse: %v", err)
+		return
 	}
 
 	// Verify the token's signature
 	if !token.Valid {
-		return "", fmt.Errorf("invalid token signature")
+		err = fmt.Errorf("invalid token signature")
+		return
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", fmt.Errorf("invalid token claims")
+		err = fmt.Errorf("invalid token claims")
+		return
 	}
 
 	// We only support jwt issued by usrmgmt server
 	if claims["iss"].(string) != jah.issuer {
-		return "", fmt.Errorf("unsupport issuer %s", claims["iss"].(string))
+		err = fmt.Errorf("unsupport issuer %s", claims["iss"].(string))
+		return
 	}
 	notValidAud := true
 	if audClaims, ok := claims["aud"].([]interface{}); ok {
@@ -109,12 +120,41 @@ func (jah *JwtAuthHandler) validateToken(tokenString string) (string, error) {
 			}
 		}
 	} else {
-		return "", fmt.Errorf("unsupport claims found in jwt payload")
+		err = fmt.Errorf("unsupport claims found in jwt payload")
+		return
 	}
 
 	if notValidAud {
-		return "", fmt.Errorf("aud validation is falied")
+		err = fmt.Errorf("aud validation is falied")
+		return
 	}
 
-	return claims["sub"].(string), nil
+	if userKey, ok = claims["sub"].(string); !ok {
+		err = fmt.Errorf("failed to extract sub")
+		return
+	}
+	roleInterfaceList := []interface{}{}
+
+	if roleInterfaceList, ok = claims["roles"].([]interface{}); !ok {
+		err = fmt.Errorf("failed to extract roles")
+		return
+	}
+	roleList, err = strg.InterfaceToStringArray(roleInterfaceList)
+	return
+}
+
+func GetUserKey(ctx context.Context) (string, error) {
+	jwtUserKey, ok := ctx.Value(JwtUserKey).(string)
+	if !ok {
+		return "", fmt.Errorf("failed to extract user key")
+	}
+	return jwtUserKey, nil
+}
+
+func GetRoles(ctx context.Context) ([]string, error) {
+	roleArr, ok := ctx.Value(roles).([]string)
+	if !ok {
+		return []string{}, fmt.Errorf("failed to extract roles")
+	}
+	return roleArr, nil
 }

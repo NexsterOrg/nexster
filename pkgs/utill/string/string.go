@@ -2,6 +2,7 @@ package string
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -45,6 +46,26 @@ func InterfaceToString(value interface{}) (string, error) {
 	// Add cases for other types you want to handle
 	default:
 		return fmt.Sprintf("%v", v), nil
+	}
+}
+
+func InterfaceToStringArray(value interface{}) ([]string, error) {
+	switch v := value.(type) {
+	case []string:
+		return v, nil
+	case []interface{}:
+		result := []string{}
+		for i, elem := range v {
+			strElem, ok := elem.(string)
+			if !ok {
+				log.Println(fmt.Errorf("converting interface to string arrary: element at index %d is not a string", i))
+				continue
+			}
+			result = append(result, strElem)
+		}
+		return result, nil
+	default:
+		return []string{}, fmt.Errorf("unsupported type: %T", value)
 	}
 }
 
