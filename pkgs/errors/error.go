@@ -67,7 +67,7 @@ func (e *conflictError) Error() string {
 	return e.message
 }
 
-func IsNotConflictError(err error) bool {
+func IsConflictError(err error) bool {
 	_, ok := err.(*conflictError)
 	return ok
 }
