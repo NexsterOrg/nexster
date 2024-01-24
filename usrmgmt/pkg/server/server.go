@@ -560,7 +560,7 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 	aud := []string{}
 	if data.Consumer == typ.Student {
-		aud = []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud}
+		aud = []string{authProvider, timeline, spaceAsAud, imageAsAud, searchAsAud, bdFinderAsAud}
 	} else if data.Consumer == typ.BoardingOwner {
 		aud = []string{bdFinderAsAud}
 	}
