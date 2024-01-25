@@ -20,6 +20,19 @@ func SendDefaultResp(w http.ResponseWriter, statusCode int, body map[string]inte
 	w.Write(resp)
 }
 
+func SendDefaultRespAny(w http.ResponseWriter, statusCode int, body interface{}) {
+	w.Header().Add(ContentType, ApplicationJson_Utf8)
+	w.Header().Add(Date, "")
+	resp, err := json.Marshal(body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("failed to marshal json body: ", err)
+		return
+	}
+	w.WriteHeader(statusCode)
+	w.Write(resp)
+}
+
 func IsNon2xxStatusCode(statusCode int) bool {
 	return statusCode < 200 || statusCode >= 300
 }
