@@ -6,6 +6,7 @@ import (
 
 const reviewer string = "reviewer"
 const bdOwner string = "bdOwner"
+const student string = "student"
 
 type Interface interface {
 	IsGranted(roleId string, perm *rbac.Permission, actions ...rbac.Action) bool
@@ -27,4 +28,5 @@ type action struct {
 type role struct {
 	reviewer *rbac.Role
 	bdOwner  *rbac.Role
+	student  *rbac.Role
 }

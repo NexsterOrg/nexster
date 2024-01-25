@@ -55,6 +55,10 @@ func NewRbacGuard() *RbacGuard {
 	if err != nil {
 		panic(fmt.Errorf("can not add boarding owner role: %v", err))
 	}
+	studentRole, err := r.RegisterRole(student, "Student role")
+	if err != nil {
+		panic(fmt.Errorf("can not add boarding owner role: %v", err))
+	}
 	// Add new roles here.
 
 	// Granting privileages - reviewer
@@ -70,15 +74,21 @@ func NewRbacGuard() *RbacGuard {
 	// Granting privileages - bdOwner
 	if err = r.Permit(bdOwnerRole.ID, mangeBoardingAds, rbac.Create, rbac.Read, rbac.Update, rbac.Delete,
 		action.Accept, action.Reject); err != nil {
-		panic(fmt.Errorf("can not permit mangeBoardingAds permissions to role %s", reviewerRole.ID))
+		panic(fmt.Errorf("can not permit mangeBoardingAds permissions to role %s", bdOwnerRole.ID))
 	}
 	if err = r.Permit(bdOwnerRole.ID, mangeBoardingOwners, rbac.Create, rbac.Read, rbac.Update, rbac.Delete); err != nil {
 		panic(fmt.Errorf("can not permit mangeBoardingOwners permissions to role %s", bdOwnerRole.ID))
+	}
+
+	// Granting privileages - student (Need to add other privileages for students)
+	if err = r.Permit(studentRole.ID, mangeBoardingAds, rbac.Read); err != nil {
+		panic(fmt.Errorf("can not permit mangeBoardingAds permissions to role %s", studentRole.ID))
 	}
 	// Add new grant privileages
 
 	role.reviewer = reviewerRole
 	role.bdOwner = bdOwnerRole
+	role.student = studentRole
 
 	return &RbacGuard{
 		cmd:    r,
