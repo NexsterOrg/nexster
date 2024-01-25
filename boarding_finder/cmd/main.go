@@ -73,6 +73,8 @@ func main() {
 		w.Write([]byte("You just called to boarding-finder/test endpoint...!"))
 	})
 
+	router.GET("/bdfinder/ads/:adKey", srv.GetAdForMainView)
+
 	router.POST("/bdfinder/ads", srv.CreateAd)
 
 	// non-protect paths

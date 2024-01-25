@@ -24,3 +24,36 @@ type CreateBoardingOwner struct {
 	Address       string   `json:"address" validate:"required,max=200"`
 	Location      string   `json:"location"`
 }
+
+// Ad with owner
+type BasicBdAd struct {
+	Key                 string   `json:"key"`
+	Title               string   `json:"title"`
+	Description         string   `json:"description"`
+	Bills               string   `json:"bills"`
+	ImageUrls           []string `json:"imageUrls"`
+	Rent                int      `json:"rent"`
+	Address             string   `json:"address,omitempty"`
+	Beds                int      `json:"beds"`
+	Baths               int      `json:"baths"`
+	Gender              string   `json:"gender"`
+	Distance            float32  `json:"distance,omitempty"` // TODO: Need to get this from google map.
+	DistanceUnit        string   `json:"distanceUnit,omitempty"`
+	CreatedAt           string   `json:"createdAt"`
+	LocationSameAsOwner bool     `json:"locationSameAsOwner"`
+}
+
+type BasicBdOwner struct {
+	Key           string   `json:"key"`
+	CreatedAt     string   `json:"createdAt"`
+	Name          string   `json:"name"`
+	MainContact   string   `json:"mainContact"`
+	OtherContacts []string `json:"otherContacts"`
+	Address       string   `json:"address,omitempty"`
+	Location      string   `json:"location,omitempty"`
+}
+
+type AdsWithOwner struct {
+	Ad    *BasicBdAd    `json:"ad"`
+	Owner *BasicBdOwner `json:"owner"`
+}

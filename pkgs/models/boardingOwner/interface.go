@@ -7,8 +7,8 @@ const BdOwnerColl string = "boardingOwners"
 // boarding owner account status
 const (
 	Pending  string = "pending"
-	Accepted string = "accepted"
-	Rejected string = "rejected"
+	Active   string = "active"
+	InActive string = "inactive"
 )
 
 type Interface interface {

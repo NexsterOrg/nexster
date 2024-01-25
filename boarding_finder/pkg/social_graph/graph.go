@@ -41,18 +41,19 @@ func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dt
 		return
 	}
 	adNodeKey, err = gr.bdAdsCtrler.Create(ctx, &bda.BoardingAds{
-		Title:        data.Title,
-		Description:  data.Description,
-		Bills:        data.Bills,
-		ImageUrls:    data.ImageUrls,
-		Rent:         data.Rent,
-		Address:      data.Address,
-		Beds:         data.Beds,
-		Baths:        data.Baths,
-		Gender:       data.Gender,
-		Distance:     data.Distance,
-		DistanceUnit: data.DistanceUnit,
-		Status:       bda.Pending,
+		Title:               data.Title,
+		Description:         data.Description,
+		Bills:               data.Bills,
+		ImageUrls:           data.ImageUrls,
+		Rent:                data.Rent,
+		Address:             data.Address,
+		Beds:                data.Beds,
+		Baths:               data.Baths,
+		Gender:              data.Gender,
+		Distance:            data.Distance,
+		DistanceUnit:        data.DistanceUnit,
+		Status:              bda.Pending,
+		LocationSameAsOwner: false, // TODO: Update with user input value
 	})
 	if err != nil {
 		return
@@ -90,3 +91,40 @@ func (gr *socialGraph) CreateBoardingOwner(ctx context.Context, data *dtm.Create
 	})
 	return
 }
+
+func (gr *socialGraph) GetAdForMainView(ctx context.Context, adKey string) (adWithOwner *dtm.AdsWithOwner, err error) {
+	adWithOwner = &dtm.AdsWithOwner{}
+	result, err := gr.bdAdsCtrler.GetAdWithOwner(ctx, bda.MkBdAdsDocId(adKey))
+	if err != nil {
+		return
+	}
+	// check ad status
+	if result.From.Status != bda.Accepted {
+		return
+	}
+	// check owner data
+	if result.To.Status != bdo.Active {
+		return
+	}
+	adWithOwner = dtm.ConvertAdWithOwnerData(result)
+	if result.From.LocationSameAsOwner {
+		adWithOwner.Ad.Address = ""
+		adWithOwner.Ad.Distance = 0
+		adWithOwner.Ad.DistanceUnit = ""
+	} else {
+		adWithOwner.Owner.Address = ""
+		adWithOwner.Owner.Location = ""
+	}
+	return
+}
+
+/*
+2. ad status should be in : accepted status - done
+3. main contact number should be valid - owner (we can trust it should be correct) - done
+4. Owner should also status: active - done
+5, Get ad info
+5. get the owner info.
+6. remove following fields: acceptedAt, rejectedAt, status. - done
+7. locationSameAsOwner --> Take location info from owner. - done
+
+*/

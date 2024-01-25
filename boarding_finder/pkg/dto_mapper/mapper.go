@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	vdtor "github.com/go-playground/validator/v10"
+
+	bda "github.com/NamalSanjaya/nexster/pkgs/models/boarding_ads"
 )
 
 type DtoTypes interface {
@@ -30,4 +32,34 @@ func ReadJsonBody[T DtoTypes](r *http.Request, validator *vdtor.Validate) (*T, e
 	}
 
 	return data, nil
+}
+
+func ConvertAdWithOwnerData(data *bda.BdAdsWithOwner) *AdsWithOwner {
+	return &AdsWithOwner{
+		Ad: &BasicBdAd{
+			Key:                 data.From.Key,
+			Title:               data.From.Title,
+			Description:         data.From.Description,
+			Bills:               data.From.Bills,
+			ImageUrls:           data.From.ImageUrls,
+			Rent:                data.From.Rent,
+			Address:             data.From.Address,
+			Beds:                data.From.Beds,
+			Baths:               data.From.Baths,
+			Gender:              data.From.Gender,
+			Distance:            data.From.Distance,
+			DistanceUnit:        data.From.DistanceUnit,
+			CreatedAt:           data.From.CreatedAt,
+			LocationSameAsOwner: data.From.LocationSameAsOwner,
+		},
+		Owner: &BasicBdOwner{
+			Key:           data.To.Key,
+			CreatedAt:     data.To.CreatedAt,
+			Name:          data.To.Name,
+			MainContact:   data.To.MainContact,
+			OtherContacts: data.To.OtherContacts,
+			Address:       data.To.Address,
+			Location:      data.To.Location,
+		},
+	}
 }

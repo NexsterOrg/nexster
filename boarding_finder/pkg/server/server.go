@@ -36,6 +36,11 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger, rbacGuard *rb.RbacGua
 	}
 }
 
+/**
+TODO: Ad can refer to owner's address info depeding of the locationSameAsOwner.
+* Change the code logic according to that.
+*/
+
 // roles: reviewer, bdOwner
 func (s *server) CreateAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{}
@@ -117,3 +122,41 @@ func (s *server) authorize(ctx context.Context, perm *rbac.Permission, actions .
 	}
 	return
 }
+
+// roles:  bdOwner, student
+func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{}
+	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
+	if err != nil {
+		s.logger.Infof("failed to get ad: %v", err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	adKey := p.ByName("adKey")
+	result, err := s.scGraph.GetAdForMainView(r.Context(), adKey)
+	if er.IsNotFoundError(err) {
+		s.logger.Infof("failed to get ad: %v", err)
+		uh.SendDefaultResp(w, http.StatusNotFound, respBody)
+		return
+	}
+	if er.IsConflictError(err) {
+		s.logger.Infof("failed to get ad: %v", err)
+		uh.SendDefaultResp(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Infof("failed to get ad: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultRespAny(w, http.StatusOK, result)
+}
+
+/**
+1. Check privileaged roles: read ads --> bdOwner, students
+2. status should be in : accepted status
+3. main contact number should be valid - owner
+4. Owner should also status: active
+5. get the owner info.
+6. remove following fields: acceptedAt, rejectedAt, status.
+*/

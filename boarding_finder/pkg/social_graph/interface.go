@@ -9,4 +9,5 @@ import (
 type Interface interface {
 	CreateAd(ctx context.Context, bdOwnerKey string, data *dtm.CreateAdDto) (adNodeKey, ownedEdgeKey string, err error)
 	CreateBoardingOwner(ctx context.Context, data *dtm.CreateBoardingOwner) (bdOwnerKey string, err error)
+	GetAdForMainView(ctx context.Context, adKey string) (adWithOwner *dtm.AdsWithOwner, err error)
 }
