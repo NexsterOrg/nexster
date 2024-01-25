@@ -12,6 +12,8 @@ type CreateAdDto struct {
 	Gender       string   `json:"gender" validate:"required,oneof=boy girl any"`
 	Distance     float32  `json:"distance" validate:"required"` // TODO: Need to get this from google map.
 	DistanceUnit string   `json:"distanceUnit" validate:"required,oneof=m km"`
+	// LocationSameAsOwner bool `json:"locationSameAsOwner" validate:"required"` --> if this is true address or anyother location related info
+	// for an Ad is not required. This is a TODO work.
 }
 
 type CreateBoardingOwner struct {
@@ -56,4 +58,9 @@ type BasicBdOwner struct {
 type AdsWithOwner struct {
 	Ad    *BasicBdAd    `json:"ad"`
 	Owner *BasicBdOwner `json:"owner"`
+}
+
+// Change status of an ad
+type AdStatus struct {
+	Status string `json:"status" validate:"required,oneof=pending accepted rejected"`
 }

@@ -72,8 +72,7 @@ func NewRbacGuard() *RbacGuard {
 	}
 
 	// Granting privileages - bdOwner
-	if err = r.Permit(bdOwnerRole.ID, mangeBoardingAds, rbac.Create, rbac.Read, rbac.Update, rbac.Delete,
-		action.Accept, action.Reject); err != nil {
+	if err = r.Permit(bdOwnerRole.ID, mangeBoardingAds, rbac.Create, rbac.Read, rbac.Update, rbac.Delete); err != nil {
 		panic(fmt.Errorf("can not permit mangeBoardingAds permissions to role %s", bdOwnerRole.ID))
 	}
 	if err = r.Permit(bdOwnerRole.ID, mangeBoardingOwners, rbac.Create, rbac.Read, rbac.Update, rbac.Delete); err != nil {
@@ -81,7 +80,9 @@ func NewRbacGuard() *RbacGuard {
 	}
 
 	// Granting privileages - student (Need to add other privileages for students)
-	if err = r.Permit(studentRole.ID, mangeBoardingAds, rbac.Read); err != nil {
+	// TODO: STUDENTS SHOULD NOT HAVE PRIVILEAGES TO ACCPET OR REJECT ADS. THIS IS ONLY TILL REVIEWER ACCOUNT BECOME AVAILABLE.
+	// REMOVE action.Accept, action.Reject in future.
+	if err = r.Permit(studentRole.ID, mangeBoardingAds, rbac.Read, action.Accept, action.Reject); err != nil {
 		panic(fmt.Errorf("can not permit mangeBoardingAds permissions to role %s", studentRole.ID))
 	}
 	// Add new grant privileages

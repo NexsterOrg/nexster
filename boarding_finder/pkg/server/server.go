@@ -41,7 +41,7 @@ TODO: Ad can refer to owner's address info depeding of the locationSameAsOwner.
 * Change the code logic according to that.
 */
 
-// roles: reviewer, bdOwner
+// roles: reviewer, bdOwner,
 func (s *server) CreateAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{}
 	userKey, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Create)
@@ -123,7 +123,7 @@ func (s *server) authorize(ctx context.Context, perm *rbac.Permission, actions .
 	return
 }
 
-// roles:  bdOwner, student
+// roles:  bdOwner, student, reviewer
 func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{}
 	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
@@ -132,8 +132,7 @@ func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p http
 		uh.SendDefaultResp(w, statusCode, respBody)
 		return
 	}
-	adKey := p.ByName("adKey")
-	result, err := s.scGraph.GetAdForMainView(r.Context(), adKey)
+	result, err := s.scGraph.GetAdForMainView(r.Context(), p.ByName("adKey"))
 	if er.IsNotFoundError(err) {
 		s.logger.Infof("failed to get ad: %v", err)
 		uh.SendDefaultResp(w, http.StatusNotFound, respBody)
@@ -152,11 +151,33 @@ func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p http
 	uh.SendDefaultRespAny(w, http.StatusOK, result)
 }
 
-/**
-1. Check privileaged roles: read ads --> bdOwner, students
-2. status should be in : accepted status
-3. main contact number should be valid - owner
-4. Owner should also status: active
-5. get the owner info.
-6. remove following fields: acceptedAt, rejectedAt, status.
-*/
+// roles: reviewer (Need to write a api to create reviewers - usrmgmt api). reviewer --> member
+func (s *server) ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{}
+	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, s.rbac.Action.Accept, s.rbac.Action.Reject)
+	if err != nil {
+		s.logger.Infof("failed to change status of ad: %v", err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	// read json body
+	body, err := dtm.ReadJsonBody[dtm.AdStatus](r, s.validator)
+	if err != nil {
+		s.logger.Infof("failed to change status of ad: %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	err = s.scGraph.ChangeAdStatus(r.Context(), p.ByName("adKey"), body.Status)
+	if er.IsNotFoundError(err) {
+		s.logger.Infof("failed to change status of ad: %v", err)
+		uh.SendDefaultResp(w, http.StatusNotFound, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Infof("failed to change status of ad: %v", err)
+		uh.SendDefaultRespAny(w, http.StatusInternalServerError, nil)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusNoContent, respBody)
+}

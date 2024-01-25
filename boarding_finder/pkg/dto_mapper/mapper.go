@@ -11,12 +11,12 @@ import (
 	bda "github.com/NamalSanjaya/nexster/pkgs/models/boarding_ads"
 )
 
-type DtoTypes interface {
-	CreateAdDto | CreateBoardingOwner
+type dtoTypes interface {
+	CreateAdDto | CreateBoardingOwner | AdStatus
 }
 
 // Generic function to read http req json body
-func ReadJsonBody[T DtoTypes](r *http.Request, validator *vdtor.Validate) (*T, error) {
+func ReadJsonBody[T dtoTypes](r *http.Request, validator *vdtor.Validate) (*T, error) {
 	var data *T = new(T)
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()

@@ -10,6 +10,7 @@ type Interface interface {
 	CreateAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	CreateBoardingOwner(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	GetAdForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type ServerConfig struct {

@@ -14,6 +14,7 @@ const (
 type Interface interface {
 	Create(ctx context.Context, doc *BoardingAds) (string, error)
 	GetAdWithOwner(ctx context.Context, adId string) (result *BdAdsWithOwner, err error)
+	Update(ctx context.Context, key string, updateFields map[string]interface{}) error
 }
 
 type BoardingAds struct {

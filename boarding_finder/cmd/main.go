@@ -77,6 +77,8 @@ func main() {
 
 	router.POST("/bdfinder/ads", srv.CreateAd)
 
+	router.PUT("/bdfinder/ads/:adKey/status", srv.ChangeStatusOfAd)
+
 	// non-protect paths
 	router.POST(authprv.BdOwnerAccCreatePath, srv.CreateBoardingOwner)
 

@@ -118,13 +118,8 @@ func (gr *socialGraph) GetAdForMainView(ctx context.Context, adKey string) (adWi
 	return
 }
 
-/*
-2. ad status should be in : accepted status - done
-3. main contact number should be valid - owner (we can trust it should be correct) - done
-4. Owner should also status: active - done
-5, Get ad info
-5. get the owner info.
-6. remove following fields: acceptedAt, rejectedAt, status. - done
-7. locationSameAsOwner --> Take location info from owner. - done
-
-*/
+func (gr *socialGraph) ChangeAdStatus(ctx context.Context, adKey, status string) error {
+	return gr.bdAdsCtrler.Update(ctx, adKey, map[string]interface{}{
+		"status": status,
+	})
+}

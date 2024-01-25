@@ -79,3 +79,11 @@ func (bac *bdAdsCtrler) GetAdWithOwner(ctx context.Context, adId string) (result
 	result = results[0]
 	return
 }
+
+func (bac *bdAdsCtrler) Update(ctx context.Context, key string, updateFields map[string]interface{}) error {
+	_, err := bac.argClient.Coll.UpdateDocument(ctx, key, updateFields)
+	if driver.IsNotFoundGeneral(err) {
+		return er.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
+	return err
+}
