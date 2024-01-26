@@ -3,6 +3,7 @@ package string
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -96,4 +97,22 @@ func IsInArray(arr []string, id string) bool {
 
 func MkCompletePath(rootDir, relPath string) string {
 	return fmt.Sprintf("%s/%s", rootDir, relPath)
+}
+
+// Check valid mobile phone number or not.
+func ConvertToValidMobileNo(phoneNo string) (string, error) {
+	if len(phoneNo) != 10 {
+		return "", fmt.Errorf("len should be 10")
+	}
+
+	if phoneNo[:2] != "07" {
+		return "", fmt.Errorf("prefix should be 07")
+	}
+
+	// Check if the remaining 8 characters are numeric
+
+	if !regexp.MustCompile(`^[0-9]+$`).MatchString(phoneNo[2:]) {
+		return "", fmt.Errorf("all characters should be numberic")
+	}
+	return "94" + phoneNo[1:], nil
 }

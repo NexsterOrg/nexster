@@ -12,6 +12,7 @@ type Interface interface {
 	GetAdForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	ListAdsForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type ServerConfig struct {

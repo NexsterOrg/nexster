@@ -1,5 +1,10 @@
 package math
 
+import (
+	"math/rand"
+	"time"
+)
+
 type Number interface {
 	int | float32
 }
@@ -16,4 +21,8 @@ func Min[T Number](num1, num2 T) T {
 		return num2
 	}
 	return num1
+}
+
+func GenRandomNumber() int {
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9000) + 1000
 }

@@ -9,6 +9,7 @@ import (
 // /bdfinder/auth/* ---> auth disabled paths
 const (
 	BdOwnerAccCreatePath string = "/bdfinder/auth/owner"
+	SmsOtpSendPath       string = "/bdfinder/otp/send"
 )
 
 type authProvider struct {

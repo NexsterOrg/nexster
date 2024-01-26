@@ -20,6 +20,7 @@ import (
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
+	smsapi "github.com/NamalSanjaya/nexster/pkgs/client/sms_api"
 	bao "github.com/NamalSanjaya/nexster/pkgs/models/boardingAdOwned"
 	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
 	bad "github.com/NamalSanjaya/nexster/pkgs/models/boarding_ads"
@@ -27,9 +28,10 @@ import (
 )
 
 type Configs struct {
-	Server           bdfsrv.ServerConfig `yaml:"server"`
-	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
-	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
+	Server           bdfsrv.ServerConfig    `yaml:"server"`
+	ArgDbCfg         argdb.Config           `yaml:"arangodb"`
+	ContentClientCfg cl.HttpClientConfig    `yaml:"content"`
+	SmsClientCfg     smsapi.SmsClientConfig `yaml:"sms"`
 }
 
 const issuer string = "usrmgmt"
@@ -69,8 +71,11 @@ func main() {
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
+	// Sms client
+	smsClient := smsapi.NewApiClient(&configs.SmsClientCfg)
+
 	sociGrphCtrler := socigr.NewGraph(bdAdCtrler, bdAdOwnedCtrler, bdOwnerCtrler, repo, contentApiClient)
-	srv := bdfsrv.New(sociGrphCtrler, logger, rbac.NewRbacGuard())
+	srv := bdfsrv.New(sociGrphCtrler, logger, rbac.NewRbacGuard(), smsClient)
 
 	router.GET("/bdfinder/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		w.WriteHeader(http.StatusOK)
@@ -86,6 +91,7 @@ func main() {
 
 	// non-protect paths
 	router.POST(authprv.BdOwnerAccCreatePath, srv.CreateBoardingOwner)
+	router.POST(authprv.SmsOtpSendPath, srv.SendOTP)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     configs.Server.AllowedOrigins,

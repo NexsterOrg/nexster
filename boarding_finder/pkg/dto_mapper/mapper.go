@@ -13,7 +13,7 @@ import (
 )
 
 type dtoTypes interface {
-	CreateAdDto | CreateBoardingOwner | AdStatus
+	CreateAdDto | CreateBoardingOwner | AdStatus | Otp
 }
 
 // Generic function to read http req json body

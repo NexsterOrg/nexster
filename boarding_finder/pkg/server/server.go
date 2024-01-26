@@ -14,25 +14,33 @@ import (
 	rb "github.com/NamalSanjaya/nexster/boarding_finder/pkg/rbac"
 	socigr "github.com/NamalSanjaya/nexster/boarding_finder/pkg/social_graph"
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	smsapi "github.com/NamalSanjaya/nexster/pkgs/client/sms_api"
 	er "github.com/NamalSanjaya/nexster/pkgs/errors"
 	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
+	mt "github.com/NamalSanjaya/nexster/pkgs/utill/math"
+	strg "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 )
+
+const otpMsg string = "Nexster code: %d. Valid for 5 minutes."
+const fromNx string = "Nexster"
 
 type server struct {
 	logger    *lg.Logger
 	scGraph   socigr.Interface
 	validator *vdtor.Validate
 	rbac      *rb.RbacGuard
+	smsClient smsapi.Interface
 }
 
 var _ Interface = (*server)(nil)
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger, rbacGuard *rb.RbacGuard) *server {
+func New(sgrInterface socigr.Interface, logger *lg.Logger, rbacGuard *rb.RbacGuard, smsIntfce smsapi.Interface) *server {
 	return &server{
 		scGraph:   sgrInterface,
 		logger:    logger,
 		validator: vdtor.New(),
 		rbac:      rbacGuard,
+		smsClient: smsIntfce,
 	}
 }
 
@@ -203,4 +211,29 @@ func (s *server) ListAdsForMainView(w http.ResponseWriter, r *http.Request, p ht
 	respBody["resultsCount"] = resultsCount
 	respBody["data"] = result
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
+
+func (s *server) SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+
+	// read json body
+	body, err := dtm.ReadJsonBody[dtm.Otp](r, s.validator)
+	if err != nil {
+		s.logger.Infof("failed to send otp: %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	phoneNo, err := strg.ConvertToValidMobileNo(body.PhoneNo)
+	if err != nil {
+		s.logger.Info("failed to send otp: invalid phoneNo")
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = s.smsClient.SendSms(r.Context(), fromNx, fmt.Sprintf(otpMsg, mt.GenRandomNumber()), phoneNo); err != nil {
+		s.logger.Infof("failed to send otp: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusNoContent, respBody)
 }

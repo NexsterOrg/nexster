@@ -82,3 +82,7 @@ type AdForList struct {
 	Distance  float32 `json:"distance"`
 	CreatedAt string  `json:"createdAt"`
 }
+
+type Otp struct {
+	PhoneNo string `json:"phoneNo" validate:"required,len=10"`
+}
