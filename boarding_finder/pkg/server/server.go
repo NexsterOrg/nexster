@@ -191,19 +191,16 @@ func (s *server) ListAdsForMainView(w http.ResponseWriter, r *http.Request, p ht
 		uh.SendDefaultResp(w, statusCode, respBody)
 		return
 	}
-	result, err := s.scGraph.ListAdsWithFilters(r.Context(), dtm.ConvertQueryParams(r))
+	data := dtm.ConvertQueryParams(r)
+	result, resultsCount, err := s.scGraph.ListAdsWithFilters(r.Context(), data)
 	if err != nil {
 		s.logger.Infof("failed to list ads: %v", err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	uh.SendDefaultRespAny(w, http.StatusOK, result)
+	respBody["pg"] = data.Pg
+	respBody["pgSize"] = data.PgSize
+	respBody["resultsCount"] = resultsCount
+	respBody["data"] = result
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
-
-/*
-1. Validate and set to default if necessary
-2. owner should be active
-3. Ad should be in accepted state
-4. Think about other required data for listing other than ad list
-page, pageSize, resultCount, totalResults
-*/

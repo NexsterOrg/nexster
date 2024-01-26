@@ -24,6 +24,7 @@ func NewApiClient(config *cl.HttpClientConfig) *conentApiClient {
 	}
 }
 
+// imgIdWithNamespace format: <namespace>/<imageName> (eg: posts/38491345.jpg)
 func (ca *conentApiClient) CreateImageUrl(imgIdWithNamespace, permission string) (string, error) {
 	var data map[string]string
 	resp, err := ca.client.Get(fmt.Sprintf("%s/content/hmac/image/%s?perm=%s", ca.domain, imgIdWithNamespace, permission))

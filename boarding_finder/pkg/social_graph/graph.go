@@ -3,9 +3,11 @@ package socialgraph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	dtm "github.com/NamalSanjaya/nexster/boarding_finder/pkg/dto_mapper"
 	rp "github.com/NamalSanjaya/nexster/boarding_finder/pkg/repository"
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	er "github.com/NamalSanjaya/nexster/pkgs/errors"
 	bao "github.com/NamalSanjaya/nexster/pkgs/models/boardingAdOwned"
 	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
@@ -18,16 +20,19 @@ type socialGraph struct {
 	bdAdOwnedCtrler bao.Interface
 	bdOwnerCtrler   bdo.Interface
 	repo            rp.Interface
+	contentClient   contapi.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
-func NewGraph(bdAdsIntfce bda.Interface, bdAdOwnedIntfce bao.Interface, bdOwnerIntfce bdo.Interface, repoIntfce rp.Interface) *socialGraph {
+func NewGraph(bdAdsIntfce bda.Interface, bdAdOwnedIntfce bao.Interface, bdOwnerIntfce bdo.Interface, repoIntfce rp.Interface,
+	contentApiClient contapi.Interface) *socialGraph {
 	return &socialGraph{
 		bdAdsCtrler:     bdAdsIntfce,
 		bdAdOwnedCtrler: bdAdOwnedIntfce,
 		bdOwnerCtrler:   bdOwnerIntfce,
 		repo:            repoIntfce,
+		contentClient:   contentApiClient,
 	}
 }
 
@@ -125,10 +130,37 @@ func (gr *socialGraph) ChangeAdStatus(ctx context.Context, adKey, status string)
 }
 
 // TODO: Need to improve this function
-func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) ([]*bda.AdInfoForList, error) {
-	return gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths, data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
-}
+func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) (ads []*dtm.AdForList, adsCount int, err error) {
+	ads = []*dtm.AdForList{}
+	results, err := gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths, data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
+	if err != nil {
+		return
+	}
 
-/*
-1. loop over the ad list --> get the first image --> create the image url --> send that image Url only to client.
-*/
+	for _, ad := range results {
+		imgs := ad.ImageUrls
+		if len(imgs) == 0 {
+			// Ads without at least one image is not allowed.
+			continue
+		}
+
+		coverImgUrl, err2 := gr.contentClient.CreateImageUrl(imgs[0], contapi.Viewer)
+		if err2 != nil {
+			log.Println("failed to create cover image url for ad: ", err2)
+			continue
+		}
+		ads = append(ads, &dtm.AdForList{
+			Key:       ad.Key,
+			Title:     ad.Title,
+			ImageUrl:  coverImgUrl,
+			Rent:      ad.Rent,
+			Beds:      ad.Beds,
+			Baths:     ad.Baths,
+			Gender:    ad.Gender,
+			Distance:  ad.Distance,
+			CreatedAt: ad.CreatedAt,
+		})
+		adsCount++
+	}
+	return
+}

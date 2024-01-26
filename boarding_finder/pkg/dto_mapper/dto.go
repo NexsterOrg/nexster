@@ -70,3 +70,15 @@ type ListFilterQueryParams struct {
 	SortBy                                                                          string
 	Genders, BillTypes                                                              []string
 }
+
+type AdForList struct {
+	Key       string  `json:"key"`
+	Title     string  `json:"title"`
+	ImageUrl  string  `json:"imageUrl"`
+	Rent      int     `json:"rent"`
+	Beds      int     `json:"beds"`
+	Baths     int     `json:"baths"`
+	Gender    string  `json:"gender"`
+	Distance  float32 `json:"distance"`
+	CreatedAt string  `json:"createdAt"`
+}

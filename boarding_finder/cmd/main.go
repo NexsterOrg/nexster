@@ -19,6 +19,7 @@ import (
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
+	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	bao "github.com/NamalSanjaya/nexster/pkgs/models/boardingAdOwned"
 	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
 	bad "github.com/NamalSanjaya/nexster/pkgs/models/boarding_ads"
@@ -65,7 +66,10 @@ func main() {
 	// repo
 	repo := rp.NewRepo(argdbClient)
 
-	sociGrphCtrler := socigr.NewGraph(bdAdCtrler, bdAdOwnedCtrler, bdOwnerCtrler, repo)
+	// API clients
+	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
+
+	sociGrphCtrler := socigr.NewGraph(bdAdCtrler, bdAdOwnedCtrler, bdOwnerCtrler, repo, contentApiClient)
 	srv := bdfsrv.New(sociGrphCtrler, logger, rbac.NewRbacGuard())
 
 	router.GET("/bdfinder/test", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
