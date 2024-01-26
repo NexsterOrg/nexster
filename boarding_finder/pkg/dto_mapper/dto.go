@@ -9,7 +9,7 @@ type CreateAdDto struct {
 	Address      string   `json:"address" validate:"required,max=255"`
 	Beds         int      `json:"beds" validate:"required,gt=0"`
 	Baths        int      `json:"baths" validate:"required,gt=0"`
-	Gender       string   `json:"gender" validate:"required,oneof=boy girl any"`
+	Gender       string   `json:"gender" validate:"required,oneof=boys girls any"`
 	Distance     float32  `json:"distance" validate:"required"` // TODO: Need to get this from google map.
 	DistanceUnit string   `json:"distanceUnit" validate:"required,oneof=m km"`
 	// LocationSameAsOwner bool `json:"locationSameAsOwner" validate:"required"` --> if this is true address or anyother location related info
@@ -63,4 +63,10 @@ type AdsWithOwner struct {
 // Change status of an ad
 type AdStatus struct {
 	Status string `json:"status" validate:"required,oneof=pending accepted rejected"`
+}
+
+type ListFilterQueryParams struct {
+	Pg, PgSize, MinRent, MaxRent, MaxDistance, MinBeds, MaxBeds, MinBaths, MaxBaths int
+	SortBy                                                                          string
+	Genders, BillTypes                                                              []string
 }

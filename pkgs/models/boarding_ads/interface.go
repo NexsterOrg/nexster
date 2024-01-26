@@ -15,6 +15,8 @@ type Interface interface {
 	Create(ctx context.Context, doc *BoardingAds) (string, error)
 	GetAdWithOwner(ctx context.Context, adId string) (result *BdAdsWithOwner, err error)
 	Update(ctx context.Context, key string, updateFields map[string]interface{}) error
+	ListAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
+		offset, count int, sortBy string, genders, billTypes []string) ([]*AdInfoForList, error)
 }
 
 type BoardingAds struct {
@@ -47,4 +49,17 @@ type BdAdsWithOwner struct {
 		Location      string   `json:"location"`
 		Status        string   `json:"status"`
 	} `json:"to"`
+}
+
+// List ads
+type AdInfoForList struct {
+	Key       string   `json:"key"`
+	Title     string   `json:"title"`
+	ImageUrls []string `json:"imageUrls"`
+	Rent      int      `json:"rent"`
+	Beds      int      `json:"beds"`
+	Baths     int      `json:"baths"`
+	Gender    string   `json:"gender"`
+	Distance  float32  `json:"distance"`
+	CreatedAt string   `json:"createdAt"`
 }

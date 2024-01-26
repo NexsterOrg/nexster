@@ -38,7 +38,7 @@ func (bac *bdAdsCtrler) Create(ctx context.Context, doc *BoardingAds) (string, e
 }
 
 // results format [ {}, {}, {} ]
-func (bac *bdAdsCtrler) listAdWithOwner(ctx context.Context, adId string) ([]*BdAdsWithOwner, error) {
+func (bac *bdAdsCtrler) getAdWithOwner(ctx context.Context, adId string) ([]*BdAdsWithOwner, error) {
 	results := []*BdAdsWithOwner{}
 	cursor, err := bac.argClient.Db.Query(ctx, getAdWithOwnerQry, map[string]interface{}{
 		"adId": adId,
@@ -63,7 +63,7 @@ func (bac *bdAdsCtrler) listAdWithOwner(ctx context.Context, adId string) ([]*Bd
 
 func (bac *bdAdsCtrler) GetAdWithOwner(ctx context.Context, adId string) (result *BdAdsWithOwner, err error) {
 	result = &BdAdsWithOwner{}
-	results, err := bac.listAdWithOwner(ctx, adId)
+	results, err := bac.getAdWithOwner(ctx, adId)
 	if err != nil {
 		return
 	}
@@ -86,4 +86,45 @@ func (bac *bdAdsCtrler) Update(ctx context.Context, key string, updateFields map
 		return er.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
 	}
 	return err
+}
+
+func (bac *bdAdsCtrler) ListAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
+	offset, count int, sortBy string, genders, billTypes []string) ([]*AdInfoForList, error) {
+	results := []*AdInfoForList{}
+	var query string
+	if sortBy == "rental" {
+		query = listAdsSortByRental
+	} else {
+		query = listAdsSortByDate
+	}
+	cursor, err := bac.argClient.Db.Query(ctx, query, map[string]interface{}{
+		"status":      Accepted,
+		"minRent":     minRent,
+		"maxRent":     maxRent,
+		"maxDistance": maxDist,
+		"minBeds":     minBeds,
+		"maxBeds":     maxBeds,
+		"minBaths":    minBaths,
+		"maxBaths":    maxBaths,
+		"genders":     genders,
+		"billTypes":   billTypes,
+		"offset":      offset,
+		"count":       count,
+	})
+	if err != nil {
+		return results, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result AdInfoForList
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, &result)
+	}
 }

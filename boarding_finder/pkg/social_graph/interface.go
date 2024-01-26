@@ -4,6 +4,7 @@ import (
 	"context"
 
 	dtm "github.com/NamalSanjaya/nexster/boarding_finder/pkg/dto_mapper"
+	bda "github.com/NamalSanjaya/nexster/pkgs/models/boarding_ads"
 )
 
 type Interface interface {
@@ -11,4 +12,5 @@ type Interface interface {
 	CreateBoardingOwner(ctx context.Context, data *dtm.CreateBoardingOwner) (bdOwnerKey string, err error)
 	GetAdForMainView(ctx context.Context, adKey string) (adWithOwner *dtm.AdsWithOwner, err error)
 	ChangeAdStatus(ctx context.Context, adKey, status string) error
+	ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) ([]*bda.AdInfoForList, error)
 }

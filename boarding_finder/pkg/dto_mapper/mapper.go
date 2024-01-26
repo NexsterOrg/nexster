@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	vdtor "github.com/go-playground/validator/v10"
 
@@ -62,4 +63,44 @@ func ConvertAdWithOwnerData(data *bda.BdAdsWithOwner) *AdsWithOwner {
 			Location:      data.To.Location,
 		},
 	}
+}
+
+func ConvertQueryParams(r *http.Request) *ListFilterQueryParams {
+	result := &ListFilterQueryParams{}
+	queryParams := r.URL.Query()
+
+	// Extract and convert individual parameters
+	result.Pg = convertToInt(queryParams.Get("pg"), 1)
+	result.PgSize = convertToInt(queryParams.Get("pgSize"), 10)
+
+	result.MinRent = convertToInt(queryParams.Get("mnr"), 0)
+	result.MaxRent = convertToInt(queryParams.Get("mxr"), 1e5)
+	result.MaxDistance = convertToInt(queryParams.Get("mxd"), 1e4)
+	result.MinBeds = convertToInt(queryParams.Get("mnb"), 0)
+	result.MaxBeds = convertToInt(queryParams.Get("mxb"), 100)
+	result.MinBaths = convertToInt(queryParams.Get("mnba"), 0)
+	result.MaxBaths = convertToInt(queryParams.Get("mxba"), 100)
+	result.Genders = convertToStrArr(queryParams["for"], []string{"boys", "girls", "any"}, 3)
+	result.BillTypes = convertToStrArr(queryParams["b"], []string{"include", "exclude"}, 2)
+	result.SortBy = queryParams.Get("sort")
+	if result.SortBy != "date" && result.SortBy != "rental" {
+		result.SortBy = "date"
+	}
+	return result
+}
+
+func convertToInt(valStr string, defaultVal int) int {
+	val, err := strconv.Atoi(valStr)
+	if err != nil || val <= 0 {
+		return defaultVal
+	}
+	return val
+}
+
+func convertToStrArr(arr, defaultArr []string, mxLn int) []string {
+	ln := len(arr)
+	if ln == 0 || ln > mxLn {
+		return defaultArr
+	}
+	return arr
 }

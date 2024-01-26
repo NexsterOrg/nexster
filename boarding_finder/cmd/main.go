@@ -74,6 +74,7 @@ func main() {
 	})
 
 	router.GET("/bdfinder/ads/:adKey", srv.GetAdForMainView)
+	router.GET("/bdfinder/ads", srv.ListAdsForMainView)
 
 	router.POST("/bdfinder/ads", srv.CreateAd)
 

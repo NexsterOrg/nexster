@@ -123,3 +123,12 @@ func (gr *socialGraph) ChangeAdStatus(ctx context.Context, adKey, status string)
 		"status": status,
 	})
 }
+
+// TODO: Need to improve this function
+func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) ([]*bda.AdInfoForList, error) {
+	return gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths, data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
+}
+
+/*
+1. loop over the ad list --> get the first image --> create the image url --> send that image Url only to client.
+*/

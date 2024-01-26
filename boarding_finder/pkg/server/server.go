@@ -176,8 +176,34 @@ func (s *server) ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p http
 	}
 	if err != nil {
 		s.logger.Infof("failed to change status of ad: %v", err)
-		uh.SendDefaultRespAny(w, http.StatusInternalServerError, nil)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
 	uh.SendDefaultResp(w, http.StatusNoContent, respBody)
 }
+
+// roles; bdOwner, reviewer, student
+func (s *server) ListAdsForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{}
+	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
+	if err != nil {
+		s.logger.Infof("failed to list ads: %v", err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	result, err := s.scGraph.ListAdsWithFilters(r.Context(), dtm.ConvertQueryParams(r))
+	if err != nil {
+		s.logger.Infof("failed to list ads: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	uh.SendDefaultRespAny(w, http.StatusOK, result)
+}
+
+/*
+1. Validate and set to default if necessary
+2. owner should be active
+3. Ad should be in accepted state
+4. Think about other required data for listing other than ad list
+page, pageSize, resultCount, totalResults
+*/
