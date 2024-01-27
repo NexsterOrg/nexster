@@ -95,9 +95,23 @@ func (s *server) CreateBoardingOwner(w http.ResponseWriter, r *http.Request, _ h
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
-	// 1. Check in redis cache whether main contact number is verified. IF YES proceed, ELSE return here, don't create account.
-	// 2. Check otherContacts are verified or not and mark verified one. [ {phoneNo, verified}, {} ]
-	bdOwnerKey, err := s.scGraph.CreateBoardingOwner(r.Context(), body)
+	// Check whether main contact has been validate or not
+	otpInfo, ok := s.otpMap[body.MainContact]
+	if !ok {
+		s.logger.Info("failed to create boarding owner: otp not found")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	if !otpInfo.Verified {
+		s.logger.Info("failed to create boarding owner: otp not verified")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	// NOTE: Due to cost with verifying each other contact number, we are not allowed to created other contacts.
+	// REMOVE THIS IN FUTURE, ONCE WE CAN AFFORD TO VERIFY OTHER CONTACTS.
+	body.OtherContacts = []string{}
+
+	bdOwnerKey, err := s.scGraph.CreateBoardingOwner(r.Context(), body, []string{rb.BdOwner})
 	if er.IsConflictError(err) {
 		s.logger.Errorf("failed to create boarding owner: %v", err)
 		uh.SendDefaultResp(w, http.StatusConflict, respBody)

@@ -4,8 +4,9 @@ import (
 	"github.com/euroteltr/rbac"
 )
 
+// roles
 const reviewer string = "reviewer"
-const bdOwner string = "bdOwner"
+const BdOwner string = "bdOwner"
 const student string = "student"
 
 type Interface interface {

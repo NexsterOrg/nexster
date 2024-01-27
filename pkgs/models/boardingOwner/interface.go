@@ -29,4 +29,8 @@ type BoardingOwner struct {
 	Address       string   `json:"address"`
 	Location      string   `json:"location"`
 	Status        string   `json:"status"`
+	Roles         []string `json:"roles"`
 }
+
+// TODO:
+// Remove other contacts. Due to cost with SMS, we only take one number(main contact).

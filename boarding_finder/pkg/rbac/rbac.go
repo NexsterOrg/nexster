@@ -51,7 +51,7 @@ func NewRbacGuard() *RbacGuard {
 	if err != nil {
 		panic(fmt.Errorf("can not add reviewer role: %v", err))
 	}
-	bdOwnerRole, err := r.RegisterRole(bdOwner, "Ad bdOwner role")
+	bdOwnerRole, err := r.RegisterRole(BdOwner, "Ad bdOwner role")
 	if err != nil {
 		panic(fmt.Errorf("can not add boarding owner role: %v", err))
 	}

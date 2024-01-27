@@ -68,7 +68,7 @@ func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dt
 }
 
 // Create a boarding owner node with pending status
-func (gr *socialGraph) CreateBoardingOwner(ctx context.Context, data *dtm.CreateBoardingOwner) (bdOwnerKey string, err error) {
+func (gr *socialGraph) CreateBoardingOwner(ctx context.Context, data *dtm.CreateBoardingOwner, roles []string) (bdOwnerKey string, err error) {
 	exist, err := gr.repo.ExistAndUniqueForMainContact(ctx, data.MainContact)
 	if err != nil {
 		return
@@ -93,6 +93,7 @@ func (gr *socialGraph) CreateBoardingOwner(ctx context.Context, data *dtm.Create
 		Address:       data.Address,
 		Location:      data.Location,
 		Status:        bdo.Pending,
+		Roles:         roles,
 	})
 	return
 }
