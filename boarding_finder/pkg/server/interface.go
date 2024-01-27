@@ -20,3 +20,9 @@ type ServerConfig struct {
 	PublicKeyPath  string   `yaml:"publicKeyPath"`
 	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
+
+type OtpInfo struct {
+	Otp      int
+	ExpAt    int64
+	Verified bool
+}

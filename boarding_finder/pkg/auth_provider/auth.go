@@ -25,7 +25,7 @@ func NewAuthProvider(jwtIntfce jwtAuth.Interface) *authProvider {
 func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 
-	if urlPath == BdOwnerAccCreatePath {
+	if urlPath == BdOwnerAccCreatePath || urlPath == SmsOtpSendPath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

@@ -12,4 +12,5 @@ type Interface interface {
 	GetAdForMainView(ctx context.Context, adKey string) (adWithOwner *dtm.AdsWithOwner, err error)
 	ChangeAdStatus(ctx context.Context, adKey, status string) error
 	ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) (ads []*dtm.AdForList, adsCount int, err error)
+	IsBoardingOwnerExist(ctx context.Context, phoneNo string) (bool, error)
 }

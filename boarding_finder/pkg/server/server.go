@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/euroteltr/rbac"
 	vdtor "github.com/go-playground/validator/v10"
@@ -30,6 +31,7 @@ type server struct {
 	validator *vdtor.Validate
 	rbac      *rb.RbacGuard
 	smsClient smsapi.Interface
+	otpMap    map[string]*OtpInfo
 }
 
 var _ Interface = (*server)(nil)
@@ -41,6 +43,7 @@ func New(sgrInterface socigr.Interface, logger *lg.Logger, rbacGuard *rb.RbacGua
 		validator: vdtor.New(),
 		rbac:      rbacGuard,
 		smsClient: smsIntfce,
+		otpMap:    map[string]*OtpInfo{},
 	}
 }
 
@@ -223,17 +226,47 @@ func (s *server) SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
-
 	phoneNo, err := strg.ConvertToValidMobileNo(body.PhoneNo)
 	if err != nil {
 		s.logger.Info("failed to send otp: invalid phoneNo")
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
-	if err = s.smsClient.SendSms(r.Context(), fromNx, fmt.Sprintf(otpMsg, mt.GenRandomNumber()), phoneNo); err != nil {
+	// check whether there is an account for given phone number
+	isExist, err := s.scGraph.IsBoardingOwnerExist(r.Context(), body.PhoneNo)
+	if er.IsConflictError(err) {
+		s.logger.Infof("failed to send otp: multiple users for %s: %v", body.PhoneNo, err)
+		uh.SendDefaultResp(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
 		s.logger.Infof("failed to send otp: %v", err)
 		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	uh.SendDefaultResp(w, http.StatusNoContent, respBody)
+	if isExist {
+		s.logger.Infof("failed to send otp: already exist: %v", err)
+		uh.SendDefaultResp(w, http.StatusConflict, respBody)
+		return
+	}
+	// check whether given phone no has already been verified or not.
+	if otpInfo, ok := s.otpMap[body.PhoneNo]; ok && otpInfo.Verified {
+		uh.SendDefaultResp(w, http.StatusNoContent, respBody)
+		return
+	}
+
+	otp := mt.GenRandomNumber()
+	if err = s.smsClient.SendSms(r.Context(), fromNx, fmt.Sprintf(otpMsg, otp), phoneNo); err != nil {
+		s.logger.Infof("failed to send otp: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	expAt := time.Now().Add(5 * time.Minute).Unix()
+	s.otpMap[body.PhoneNo] = &OtpInfo{
+		Otp:      otp,
+		ExpAt:    expAt,
+		Verified: false,
+	}
+	respBody["expAt"] = expAt
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }

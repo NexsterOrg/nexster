@@ -164,3 +164,8 @@ func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFil
 	}
 	return
 }
+
+// check the boarding owner existence for a given phone number
+func (gr *socialGraph) IsBoardingOwnerExist(ctx context.Context, phoneNo string) (bool, error) {
+	return gr.repo.ExistAndUniqueForMainContact(ctx, phoneNo)
+}
