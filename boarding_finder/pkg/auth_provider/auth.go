@@ -10,6 +10,7 @@ import (
 const (
 	BdOwnerAccCreatePath string = "/bdfinder/auth/owner"
 	SmsOtpSendPath       string = "/bdfinder/otp/send"
+	SmsOtpVerifyPath     string = "/bdfinder/otp/verify"
 )
 
 type authProvider struct {
@@ -25,7 +26,7 @@ func NewAuthProvider(jwtIntfce jwtAuth.Interface) *authProvider {
 func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 
-	if urlPath == BdOwnerAccCreatePath || urlPath == SmsOtpSendPath {
+	if urlPath == BdOwnerAccCreatePath || urlPath == SmsOtpSendPath || urlPath == SmsOtpVerifyPath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

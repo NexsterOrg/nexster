@@ -92,6 +92,7 @@ func main() {
 	// non-protect paths
 	router.POST(authprv.BdOwnerAccCreatePath, srv.CreateBoardingOwner)
 	router.POST(authprv.SmsOtpSendPath, srv.SendOTP)
+	router.PUT(authprv.SmsOtpVerifyPath, srv.VerifyOTP)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:     configs.Server.AllowedOrigins,

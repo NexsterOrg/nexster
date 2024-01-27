@@ -86,3 +86,8 @@ type AdForList struct {
 type Otp struct {
 	PhoneNo string `json:"phoneNo" validate:"required,len=10"`
 }
+
+type UserInputOtp struct {
+	PhoneNo string `json:"phoneNo" validate:"required,len=10"`
+	Otp     int    `json:"otp" validate:"required,min=1000,max=9999"` // otp should be 4 digit number
+}

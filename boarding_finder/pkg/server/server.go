@@ -270,3 +270,33 @@ func (s *server) SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	respBody["expAt"] = expAt
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
+
+func (s *server) VerifyOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+
+	// read json body
+	body, err := dtm.ReadJsonBody[dtm.UserInputOtp](r, s.validator)
+	if err != nil {
+		s.logger.Infof("failed to verify otp: %v", err)
+		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
+		return
+	}
+	otpInfo, ok := s.otpMap[body.PhoneNo]
+	// No record about the sent OTP
+	if !ok {
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	// Already verified
+	if otpInfo.Verified {
+		uh.SendDefaultResp(w, http.StatusNoContent, respBody)
+		return
+	}
+	// Check expiration & equality of otp
+	if time.Now().Unix() > otpInfo.ExpAt || otpInfo.Otp != body.Otp {
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	otpInfo.Verified = true
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
