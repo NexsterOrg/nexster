@@ -39,3 +39,35 @@ func (r *repo) ExistAndUniqueForMainContact(ctx context.Context, mainContact str
 	}
 	return false, errors.NewConflictError(fmt.Sprintf("more than one boarding owner keys exist: mainContact=%s", mainContact))
 }
+
+func (r *repo) IsUniqueEdgeExist(ctx context.Context, fromId, toId string) (bool, error) {
+	edgeKeys, err := r.db.ListStrings(ctx, getEdgeFromToQry, map[string]interface{}{
+		"from": fromId,
+		"to":   toId,
+	})
+	if err != nil {
+		return false, err
+	}
+	ln := len(edgeKeys)
+	if ln == 0 {
+		return false, nil
+	}
+	if ln == 1 {
+		return true, nil
+	}
+	return false, errors.NewConflictError(fmt.Sprintf("more than one edge exist: from=%s, to=%s", fromId, toId))
+}
+
+func (r *repo) DelEdgeFromTo(ctx context.Context, fromId, toId string) error {
+	edgeKeys, err := r.db.ListStrings(ctx, delEdgeFromToQry, map[string]interface{}{
+		"from": fromId,
+		"to":   toId,
+	})
+	if err != nil {
+		return err
+	}
+	if len(edgeKeys) == 0 {
+		return errors.NewNotFoundError(fmt.Sprintf("no edge from=%s, to=%s", fromId, toId))
+	}
+	return nil
+}

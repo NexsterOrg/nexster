@@ -17,6 +17,7 @@ type Interface interface {
 	Update(ctx context.Context, key string, updateFields map[string]interface{}) error
 	ListAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
 		offset, count int, sortBy string, genders, billTypes []string) ([]*AdInfoForList, error)
+	Delete(ctx context.Context, key string) error
 }
 
 type BoardingAds struct {

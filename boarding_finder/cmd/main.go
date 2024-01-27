@@ -89,6 +89,8 @@ func main() {
 
 	router.PUT("/bdfinder/ads/:adKey/status", srv.ChangeStatusOfAd)
 
+	router.DELETE("/bdfinder/ads/:adKey", srv.DeleteAd)
+
 	// non-protect paths
 	router.POST(authprv.BdOwnerAccCreatePath, srv.CreateBoardingOwner)
 	router.POST(authprv.SmsOtpSendPath, srv.SendOTP)

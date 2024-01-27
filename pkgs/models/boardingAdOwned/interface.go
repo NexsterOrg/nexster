@@ -8,6 +8,7 @@ const BdAdOwnedColl string = "boardingAdOwned"
 
 type Interface interface {
 	CreateDocument(ctx context.Context, from, to string) (string, error)
+	Delete(ctx context.Context, key string) error
 }
 
 type BdAdOwned struct {

@@ -55,7 +55,7 @@ TODO: Ad can refer to owner's address info depeding of the locationSameAsOwner.
 // roles: reviewer, bdOwner,
 func (s *server) CreateAd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{}
-	userKey, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Create)
+	userKey, _, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Create)
 	if err != nil {
 		s.logger.Infof("failed to create boarding ad: %v", err)
 		uh.SendDefaultResp(w, statusCode, respBody)
@@ -126,21 +126,24 @@ func (s *server) CreateBoardingOwner(w http.ResponseWriter, r *http.Request, _ h
 	uh.SendDefaultResp(w, http.StatusCreated, respBody)
 }
 
-func (s *server) authorize(ctx context.Context, perm *rbac.Permission, actions ...rbac.Action) (userKey string, statusCode int, err error) {
+func (s *server) authorize(ctx context.Context, perm *rbac.Permission, actions ...rbac.Action) (userKey string, roles []string, statusCode int, err error) {
+	roles = []string{}
 	userKey, err = jwt.GetUserKey(ctx)
 	if err != nil {
 		statusCode = http.StatusUnauthorized
 		return
 	}
 	// validate the role
-	roles, err := jwt.GetRoles(ctx)
+	roles, err = jwt.GetRoles(ctx)
 	if err != nil {
 		userKey = ""
+		roles = []string{}
 		statusCode = http.StatusForbidden
 		return
 	}
-	if !s.rbac.HasDesiredRole(roles, perm, actions...) {
+	if !s.rbac.HasPrivileagesForDesiredRoles(roles, perm, actions...) {
 		userKey = ""
+		roles = []string{}
 		statusCode = http.StatusForbidden
 		err = fmt.Errorf("user roles does not have sufficient permissions")
 		return
@@ -151,7 +154,7 @@ func (s *server) authorize(ctx context.Context, perm *rbac.Permission, actions .
 // roles:  bdOwner, student, reviewer
 func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{}
-	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
+	_, _, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
 	if err != nil {
 		s.logger.Infof("failed to get ad: %v", err)
 		uh.SendDefaultResp(w, statusCode, respBody)
@@ -179,7 +182,7 @@ func (s *server) GetAdForMainView(w http.ResponseWriter, r *http.Request, p http
 // roles: reviewer (Need to write a api to create reviewers - usrmgmt api). reviewer --> member
 func (s *server) ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{}
-	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, s.rbac.Action.Accept, s.rbac.Action.Reject)
+	_, _, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, s.rbac.Action.Accept, s.rbac.Action.Reject)
 	if err != nil {
 		s.logger.Infof("failed to change status of ad: %v", err)
 		uh.SendDefaultResp(w, statusCode, respBody)
@@ -210,7 +213,7 @@ func (s *server) ChangeStatusOfAd(w http.ResponseWriter, r *http.Request, p http
 // roles; bdOwner, reviewer, student
 func (s *server) ListAdsForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	respBody := map[string]interface{}{}
-	_, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
+	_, _, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
 	if err != nil {
 		s.logger.Infof("failed to list ads: %v", err)
 		uh.SendDefaultResp(w, statusCode, respBody)
@@ -313,4 +316,43 @@ func (s *server) VerifyOTP(w http.ResponseWriter, r *http.Request, _ httprouter.
 	}
 	otpInfo.Verified = true
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
+
+func (s *server) DeleteAd(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	respBody := map[string]interface{}{}
+	userKey, roles, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Delete)
+	if err != nil {
+		s.logger.Infof("failed to delete ad: %v", err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	adKey := p.ByName("adKey")
+	allowDel := true
+	if s.rbac.HasDesiredRole(rb.BdOwner, roles) {
+		// check whether given ad is own by this owner
+		allowDel, err = s.scGraph.IsAdOwner(r.Context(), adKey, userKey)
+		if err != nil {
+			s.logger.Infof("failed to delete ad: %v", err)
+			uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+			return
+		}
+	}
+	if allowDel {
+		// delete the ad
+		err = s.scGraph.DeleteAd(r.Context(), adKey, userKey)
+		if er.IsNotFoundError(err) {
+			s.logger.Infof("failed to delete ad: %v", err)
+			uh.SendDefaultResp(w, http.StatusNotFound, respBody)
+			return
+		}
+		if err != nil {
+			s.logger.Infof("failed to delete ad: %v", err)
+			uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+			return
+		}
+		uh.SendDefaultResp(w, http.StatusOK, respBody)
+		return
+	}
+	s.logger.Info("failed to delete ad: not allow to delete")
+	uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 }

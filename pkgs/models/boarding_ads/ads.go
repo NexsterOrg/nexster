@@ -128,3 +128,11 @@ func (bac *bdAdsCtrler) ListAdsWithFilters(ctx context.Context, minRent, maxRent
 		results = append(results, &result)
 	}
 }
+
+func (bac *bdAdsCtrler) Delete(ctx context.Context, key string) error {
+	_, err := bac.argClient.Coll.RemoveDocument(ctx, key)
+	if driver.IsNotFoundGeneral(err) {
+		return er.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
+	return err
+}

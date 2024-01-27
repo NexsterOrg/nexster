@@ -5,13 +5,14 @@ import (
 )
 
 // roles
-const reviewer string = "reviewer"
+const Reviewer string = "reviewer"
 const BdOwner string = "bdOwner"
 const student string = "student"
 
 type Interface interface {
 	IsGranted(roleId string, perm *rbac.Permission, actions ...rbac.Action) bool
-	HasDesiredRole(roleIds []string, perm *rbac.Permission, actions ...rbac.Action) bool
+	HasPrivileagesForDesiredRoles(roleIds []string, perm *rbac.Permission, actions ...rbac.Action) bool
+	HasDesiredRole(role string, roleIds []string) bool
 }
 
 type permission struct {

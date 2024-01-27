@@ -170,3 +170,21 @@ func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFil
 func (gr *socialGraph) IsBoardingOwnerExist(ctx context.Context, phoneNo string) (bool, error) {
 	return gr.repo.ExistAndUniqueForMainContact(ctx, phoneNo)
 }
+
+func (gr *socialGraph) IsAdOwner(ctx context.Context, adKey, userKey string) (bool, error) {
+	exist, err := gr.repo.IsUniqueEdgeExist(ctx, bda.MkBdAdsDocId(adKey), bdo.MkDocId(userKey))
+	if err != nil {
+		return false, fmt.Errorf("failed to check ad ownership existence: %v", err)
+	}
+	return exist, nil
+}
+
+func (gr *socialGraph) DeleteAd(ctx context.Context, adKey, userKey string) (err error) {
+	if err = gr.bdAdsCtrler.Delete(ctx, adKey); err != nil {
+		return
+	}
+	if err = gr.repo.DelEdgeFromTo(ctx, bda.MkBdAdsDocId(adKey), bdo.MkDocId(userKey)); err != nil {
+		return
+	}
+	return
+}

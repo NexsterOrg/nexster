@@ -14,6 +14,7 @@ type Interface interface {
 	ListAdsForMainView(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	VerifyOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	DeleteAd(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 }
 
 type ServerConfig struct {

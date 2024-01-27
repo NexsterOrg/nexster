@@ -47,7 +47,7 @@ func NewRbacGuard() *RbacGuard {
 
 	// Add roles
 	// TODO: Add support to hierachical role support. (eg: admin, subAdmin etc)
-	reviewerRole, err := r.RegisterRole(reviewer, "Ad reviewer role")
+	reviewerRole, err := r.RegisterRole(Reviewer, "Ad reviewer role")
 	if err != nil {
 		panic(fmt.Errorf("can not add reviewer role: %v", err))
 	}
@@ -103,9 +103,18 @@ func (r *RbacGuard) IsGranted(roleId string, perm *rbac.Permission, actions ...r
 	return r.cmd.IsGranted(roleId, perm, actions...)
 }
 
-func (r *RbacGuard) HasDesiredRole(roleIds []string, perm *rbac.Permission, actions ...rbac.Action) bool {
+func (r *RbacGuard) HasPrivileagesForDesiredRoles(roleIds []string, perm *rbac.Permission, actions ...rbac.Action) bool {
 	for _, role := range roleIds {
 		if r.cmd.IsGranted(role, perm, actions...) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RbacGuard) HasDesiredRole(role string, roleIds []string) bool {
+	for _, roleId := range roleIds {
+		if roleId == role {
 			return true
 		}
 	}

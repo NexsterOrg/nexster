@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/arangodb/go-driver"
+
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
+	er "github.com/NamalSanjaya/nexster/pkgs/errors"
 	"github.com/NamalSanjaya/nexster/pkgs/utill/uuid"
 )
 
@@ -32,4 +35,12 @@ func (b *bdAdOwnedCtrler) CreateDocument(ctx context.Context, from, to string) (
 		return "", fmt.Errorf("failed to create boarding owned edge document: %v", err)
 	}
 	return meta.Key, nil
+}
+
+func (b *bdAdOwnedCtrler) Delete(ctx context.Context, key string) error {
+	_, err := b.argClient.Coll.RemoveDocument(ctx, key)
+	if driver.IsNotFoundGeneral(err) {
+		return er.NewNotFoundError(fmt.Sprintf("document with key=%s is not found", key))
+	}
+	return err
 }
