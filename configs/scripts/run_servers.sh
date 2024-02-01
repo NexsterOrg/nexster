@@ -32,4 +32,7 @@ nohup go run main.go > $LOGS_DIR/timeline_server.log 2>&1 &
 cd ../../usrmgmt/cmd
 nohup go run main.go > $LOGS_DIR/usrmgmt_server.log 2>&1 &
 
+cd ../../boarding_finder/cmd
+nohup go run main.go > $LOGS_DIR/bdFinder_server.log 2>&1 &
+
 echo "--done--"
