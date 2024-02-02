@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of port numbers
-port_numbers=(8000 8001 8002 8003 8004)
+port_numbers=(8000 8001 8002 8003 8004 8005)
 
 for port in "${port_numbers[@]}"; do
     # Find process ID (PID) using lsof and grep for the given port

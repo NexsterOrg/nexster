@@ -1,7 +1,6 @@
 #!/bin/bash
 
-PROJECT_ROOT_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster
-LOGS_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster/logs
+PROJECT_ROOT_DIR=absolute-path-to-project-root-directory
 
 cd $PROJECT_ROOT_DIR
 
@@ -14,25 +13,25 @@ fi
 
 # Run content server
 cd content/cmd
-nohup go run main.go > $LOGS_DIR/content_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/content_server.log 2>&1 &
 
 # Run search server
 cd ../../search/cmd
-nohup go run main.go > $LOGS_DIR/search_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/search_server.log 2>&1 &
 
 # Run space server
 cd ../../space/cmd
-nohup go run main.go > $LOGS_DIR/space_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/space_server.log 2>&1 &
 
 # Run timeline server
 cd ../../timeline/cmd
-nohup go run main.go > $LOGS_DIR/timeline_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/timeline_server.log 2>&1 &
 
 # Run usrmgmt server
 cd ../../usrmgmt/cmd
-nohup go run main.go > $LOGS_DIR/usrmgmt_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/usrmgmt_server.log 2>&1 &
 
 cd ../../boarding_finder/cmd
-nohup go run main.go > $LOGS_DIR/bdFinder_server.log 2>&1 &
+nohup go run main.go > $PROJECT_ROOT_DIR/logs/bdFinder_server.log 2>&1 &
 
 echo "--done--"
