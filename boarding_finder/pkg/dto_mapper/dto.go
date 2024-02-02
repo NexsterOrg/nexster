@@ -81,6 +81,7 @@ type AdForList struct {
 	Gender    string  `json:"gender"`
 	Distance  float32 `json:"distance"`
 	CreatedAt string  `json:"createdAt"`
+	Address   string  `json:"address"`
 }
 
 type Otp struct {

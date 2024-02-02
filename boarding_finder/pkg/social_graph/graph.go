@@ -131,9 +131,10 @@ func (gr *socialGraph) ChangeAdStatus(ctx context.Context, adKey, status string)
 }
 
 // TODO: Need to improve this function
-func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) (ads []*dtm.AdForList, adsCount int, err error) {
+func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) (ads []*dtm.AdForList, adsCount, totalFilteredAds int, err error) {
 	ads = []*dtm.AdForList{}
-	results, err := gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths, data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
+	results, err := gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths,
+		data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
 	if err != nil {
 		return
 	}
@@ -150,6 +151,11 @@ func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFil
 			log.Println("failed to create cover image url for ad: ", err2)
 			continue
 		}
+		addr := ad.Address
+		if ad.LocationSameAsOwner && len(ad.OwnerAddr) > 0 {
+			addr = ad.OwnerAddr[0]
+		}
+
 		ads = append(ads, &dtm.AdForList{
 			Key:       ad.Key,
 			Title:     ad.Title,
@@ -160,9 +166,12 @@ func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFil
 			Gender:    ad.Gender,
 			Distance:  ad.Distance,
 			CreatedAt: ad.CreatedAt,
+			Address:   addr,
 		})
 		adsCount++
 	}
+	totalFilteredAds, err = gr.bdAdsCtrler.CountTotalAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths,
+		data.MaxBaths, (data.Pg-1)*data.PgSize, data.PgSize, data.SortBy, data.Genders, data.BillTypes)
 	return
 }
 

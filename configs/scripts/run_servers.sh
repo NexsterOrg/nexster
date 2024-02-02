@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PROJECT_ROOT_DIR=path-to-nexster-backend-repo
-LOGS_DIR=path-to-log-directory
+PROJECT_ROOT_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster
+LOGS_DIR=/home/namal/workspace/my_work/projects/nexster/dev_work/nexster-runtime/nexster/logs
 
 cd $PROJECT_ROOT_DIR
 

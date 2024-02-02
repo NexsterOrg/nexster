@@ -18,6 +18,8 @@ type Interface interface {
 	ListAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
 		offset, count int, sortBy string, genders, billTypes []string) ([]*AdInfoForList, error)
 	Delete(ctx context.Context, key string) error
+	CountTotalAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
+		offset, count int, sortBy string, genders, billTypes []string) (int, error)
 }
 
 type BoardingAds struct {
@@ -54,13 +56,16 @@ type BdAdsWithOwner struct {
 
 // List ads
 type AdInfoForList struct {
-	Key       string   `json:"key"`
-	Title     string   `json:"title"`
-	ImageUrls []string `json:"imageUrls"`
-	Rent      int      `json:"rent"`
-	Beds      int      `json:"beds"`
-	Baths     int      `json:"baths"`
-	Gender    string   `json:"gender"`
-	Distance  float32  `json:"distance"`
-	CreatedAt string   `json:"createdAt"`
+	Key                 string   `json:"key"`
+	Title               string   `json:"title"`
+	ImageUrls           []string `json:"imageUrls"`
+	Rent                int      `json:"rent"`
+	Beds                int      `json:"beds"`
+	Baths               int      `json:"baths"`
+	Gender              string   `json:"gender"`
+	Distance            float32  `json:"distance"`
+	CreatedAt           string   `json:"createdAt"`
+	OwnerAddr           []string `json:"ownerAddr"`
+	LocationSameAsOwner bool     `json:"locationSameAsOwner"`
+	Address             string   `json:"address"`
 }

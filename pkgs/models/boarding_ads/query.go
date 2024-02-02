@@ -16,7 +16,7 @@ const getAdWithOwnerQry string = `FOR v, e, p IN 1..1 OUTBOUND @adId boardingAdO
 		}
 	}`
 
-const listAdsSortByDate string = `FOR doc IN boardingAds
+const listAdsWithFilters string = `FOR doc IN boardingAds
 	FILTER doc.status == @status
 	FILTER doc.rent >= @minRent && doc.rent <= @maxRent
 	FILTER doc.distance <= @maxDistance
@@ -24,12 +24,18 @@ const listAdsSortByDate string = `FOR doc IN boardingAds
 	FILTER doc.baths >= @minBaths && doc.baths <= @maxBaths
 	FILTER doc.gender IN @genders
 	FILTER doc.bills IN @billTypes
-	SORT doc.createdAt DESC
+	SORT %s 
 	LIMIT @offset, @count
-	RETURN { "key" : doc._key, "title": doc.title, "imageUrls": doc.imageUrls, "rent": doc.rent, 
-    "beds": doc.beds, "baths": doc.baths, "gender": doc.gender, "distance": doc.distance, "createdAt": doc.createdAt }`
+	LET ownerAddress = (
+		FOR v IN 1..1 OUTBOUND doc boardingAdOwned
+		LIMIT 1
+		RETURN v.address
+	 )
+	RETURN { "key" : doc._key, "title": doc.title, "imageUrls": doc.imageUrls, "rent": doc.rent, "ownerAddr": ownerAddress,
+	"beds": doc.beds, "baths": doc.baths, "gender": doc.gender, "distance": doc.distance, "createdAt": doc.createdAt,
+	"locationSameAsOwner": doc.locationSameAsOwner, "address": doc.address }`
 
-const listAdsSortByRental string = `FOR doc IN boardingAds
+const countAdsWithFilter string = `LET totalCount = LENGTH(FOR doc IN boardingAds
 	FILTER doc.status == @status
 	FILTER doc.rent >= @minRent && doc.rent <= @maxRent
 	FILTER doc.distance <= @maxDistance
@@ -37,7 +43,4 @@ const listAdsSortByRental string = `FOR doc IN boardingAds
 	FILTER doc.baths >= @minBaths && doc.baths <= @maxBaths
 	FILTER doc.gender IN @genders
 	FILTER doc.bills IN @billTypes
-	SORT doc.rent
-	LIMIT @offset, @count
-	RETURN { "key" : doc._key, "title": doc.title, "imageUrls": doc.imageUrls, "rent": doc.rent, 
-    "beds": doc.beds, "baths": doc.baths, "gender": doc.gender, "distance": doc.distance, "createdAt": doc.createdAt }`
+	RETURN 1) RETURN totalCount`

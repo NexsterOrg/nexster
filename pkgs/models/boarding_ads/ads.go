@@ -93,9 +93,9 @@ func (bac *bdAdsCtrler) ListAdsWithFilters(ctx context.Context, minRent, maxRent
 	results := []*AdInfoForList{}
 	var query string
 	if sortBy == "rental" {
-		query = listAdsSortByRental
+		query = fmt.Sprintf(listAdsWithFilters, "doc.rent")
 	} else {
-		query = listAdsSortByDate
+		query = fmt.Sprintf(listAdsWithFilters, "doc.createdAt DESC")
 	}
 	cursor, err := bac.argClient.Db.Query(ctx, query, map[string]interface{}{
 		"status":      Accepted,
@@ -126,6 +126,42 @@ func (bac *bdAdsCtrler) ListAdsWithFilters(ctx context.Context, minRent, maxRent
 			continue
 		}
 		results = append(results, &result)
+	}
+}
+
+func (bac *bdAdsCtrler) CountTotalAdsWithFilters(ctx context.Context, minRent, maxRent, maxDist, minBeds, maxBeds, minBaths, maxBaths,
+	offset, count int, sortBy string, genders, billTypes []string) (int, error) {
+	results := []int{}
+	cursor, err := bac.argClient.Db.Query(ctx, countAdsWithFilter, map[string]interface{}{
+		"status":      Accepted,
+		"minRent":     minRent,
+		"maxRent":     maxRent,
+		"maxDistance": maxDist,
+		"minBeds":     minBeds,
+		"maxBeds":     maxBeds,
+		"minBaths":    minBaths,
+		"maxBaths":    maxBaths,
+		"genders":     genders,
+		"billTypes":   billTypes,
+	})
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close()
+
+	for {
+		var result int
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			if len(results) == 0 {
+				return 0, fmt.Errorf("failed to count filtered ads")
+			}
+			return results[0], nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		results = append(results, result)
 	}
 }
 
