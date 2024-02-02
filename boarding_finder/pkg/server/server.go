@@ -357,3 +357,15 @@ func (s *server) DeleteAd(w http.ResponseWriter, r *http.Request, p httprouter.P
 	s.logger.Info("failed to delete ad: not allow to delete")
 	uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 }
+
+// Before BoardingFinder landing page which endpoint will use to validate the user.
+func (s *server) ValidateUserForBdLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	_, _, statusCode, err := s.authorize(r.Context(), s.rbac.Perm.ManageBoardingAds, rbac.Read)
+	if err != nil {
+		s.logger.Infof("failed to validate user login: %v", err)
+		uh.SendDefaultResp(w, statusCode, respBody)
+		return
+	}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}

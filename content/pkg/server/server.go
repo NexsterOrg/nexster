@@ -25,6 +25,7 @@ const (
 	avatarNS       string = "avatar"
 	postNS         string = "post"
 	eventPostersNs string = "event-posters"
+	bdAds          string = "bdAds"
 	publicView     string = "public"
 	privateView    string = "private"
 )
@@ -80,8 +81,8 @@ func (s *server) ServeImages(w http.ResponseWriter, r *http.Request, p httproute
 	} else if namespace == postNS {
 		// for media collection, we tried to find the view by filtering based on link. link is unique in media collection.
 		view, err = s.mediaRepo.GetViewForLink(r.Context(), getBlobFullName(namespace, blobName))
-	} else if namespace == eventPostersNs {
-		// event posters have public view in the current system.
+	} else if namespace == eventPostersNs || namespace == bdAds {
+		// event posters & boarding ads have public view in the current system.
 		view = publicView
 	} else {
 		// TODO: space for futher namespaces

@@ -85,6 +85,7 @@ func main() {
 	router.GET("/bdfinder/ads/:adKey", srv.GetAdForMainView)
 	router.GET("/bdfinder/ads", srv.ListAdsForMainView)
 
+	router.POST("/bdfinder/users/validate", srv.ValidateUserForBdLogin)
 	router.POST("/bdfinder/ads", srv.CreateAd)
 
 	router.PUT("/bdfinder/ads/:adKey/status", srv.ChangeStatusOfAd)

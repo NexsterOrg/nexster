@@ -112,14 +112,24 @@ func (gr *socialGraph) GetAdForMainView(ctx context.Context, adKey string) (adWi
 	if result.To.Status != bdo.Active {
 		return
 	}
+	for i, imgId := range result.From.ImageUrls {
+		imgUrl, err := gr.contentClient.CreateImageUrl(imgId, contapi.Viewer)
+		if err != nil {
+			log.Println("failed to create cover image url for ad: ", err)
+			continue
+		}
+		result.From.ImageUrls[i] = imgUrl
+	}
+
 	adWithOwner = dtm.ConvertAdWithOwnerData(result)
 	if result.From.LocationSameAsOwner {
-		adWithOwner.Ad.Address = ""
-		adWithOwner.Ad.Distance = 0
-		adWithOwner.Ad.DistanceUnit = ""
+		adWithOwner.Ad.Address = adWithOwner.Owner.Address
+		// TODO: Enable them when necessary.
+		// adWithOwner.Ad.Distance = 0
+		// adWithOwner.Ad.DistanceUnit = ""
 	} else {
 		adWithOwner.Owner.Address = ""
-		adWithOwner.Owner.Location = ""
+		// adWithOwner.Owner.Location = ""
 	}
 	return
 }
@@ -131,6 +141,7 @@ func (gr *socialGraph) ChangeAdStatus(ctx context.Context, adKey, status string)
 }
 
 // TODO: Need to improve this function
+// 1. Need to check whether owner is active or not.
 func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFilterQueryParams) (ads []*dtm.AdForList, adsCount, totalFilteredAds int, err error) {
 	ads = []*dtm.AdForList{}
 	results, err := gr.bdAdsCtrler.ListAdsWithFilters(ctx, data.MinRent, data.MaxRent, data.MaxDistance, data.MinBeds, data.MaxBeds, data.MinBaths,

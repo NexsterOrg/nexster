@@ -15,6 +15,7 @@ type Interface interface {
 	SendOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	VerifyOTP(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	DeleteAd(w http.ResponseWriter, r *http.Request, p httprouter.Params)
+	ValidateUserForBdLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type ServerConfig struct {
