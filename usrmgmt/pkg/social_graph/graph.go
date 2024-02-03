@@ -74,7 +74,8 @@ const getLoginInfoForIndxQry string = `FOR v IN users
 	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
 
 const getBdOwnersForLogin string = `FOR v IN boardingOwners
-	filter v.mainContact == @mainContact
+	FILTER v.status == "active"
+	FILTER v.mainContact == @mainContact
 	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
 
 type socialGraph struct {
@@ -406,7 +407,6 @@ func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, id, givenP
 	if err != nil {
 		return
 	}
-
 	ln := len(results)
 	if ln == 0 {
 		err = errs.NewNotFoundError(fmt.Sprintf("user is not found: id=%s, consumerType=%s", id, consumerType))
