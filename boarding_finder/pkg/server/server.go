@@ -95,18 +95,19 @@ func (s *server) CreateBoardingOwner(w http.ResponseWriter, r *http.Request, _ h
 		uh.SendDefaultResp(w, http.StatusBadRequest, respBody)
 		return
 	}
+	// TODO: OTP Validation is disable due to cost concern. Enable it later.
 	// Check whether main contact has been validate or not
-	otpInfo, ok := s.otpMap[body.MainContact]
-	if !ok {
-		s.logger.Info("failed to create boarding owner: otp not found")
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
-	if !otpInfo.Verified {
-		s.logger.Info("failed to create boarding owner: otp not verified")
-		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
-		return
-	}
+	// otpInfo, ok := s.otpMap[body.MainContact]
+	// if !ok {
+	// 	s.logger.Info("failed to create boarding owner: otp not found")
+	// 	uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+	// 	return
+	// }
+	// if !otpInfo.Verified {
+	// 	s.logger.Info("failed to create boarding owner: otp not verified")
+	// 	uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+	// 	return
+	// }
 	// NOTE: Due to cost with verifying each other contact number, we are not allowed to created other contacts.
 	// REMOVE THIS IN FUTURE, ONCE WE CAN AFFORD TO VERIFY OTHER CONTACTS.
 	body.OtherContacts = []string{}
