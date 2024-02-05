@@ -31,7 +31,7 @@ const listAdsWithFilters string = `FOR doc IN boardingAds
 		LIMIT 1
 		RETURN v.address
 	 )
-	RETURN { "key" : doc._key, "title": doc.title, "imageUrls": doc.imageUrls, "rent": doc.rent, "ownerAddr": ownerAddress,
+	RETURN { "key" : doc._key, "imageUrls": doc.imageUrls, "rent": doc.rent, "ownerAddr": ownerAddress,
 	"beds": doc.beds, "baths": doc.baths, "gender": doc.gender, "distance": doc.distance, "createdAt": doc.createdAt,
 	"locationSameAsOwner": doc.locationSameAsOwner, "address": doc.address }`
 

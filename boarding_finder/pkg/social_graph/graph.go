@@ -36,6 +36,11 @@ func NewGraph(bdAdsIntfce bda.Interface, bdAdOwnedIntfce bao.Interface, bdOwnerI
 	}
 }
 
+/**
+TODO:
+1.Boarding owner should be in active state.
+*/
+
 func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dtm.CreateAdDto) (adNodeKey, ownedEdgeKey string, err error) {
 	isExisted, err := gr.bdOwnerCtrler.Exist(ctx, bdOwnerKey)
 	if err != nil {
@@ -46,7 +51,6 @@ func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dt
 		return
 	}
 	adNodeKey, err = gr.bdAdsCtrler.Create(ctx, &bda.BoardingAds{
-		Title:               data.Title,
 		Description:         data.Description,
 		Bills:               data.Bills,
 		ImageUrls:           data.ImageUrls,
@@ -58,7 +62,7 @@ func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dt
 		Distance:            data.Distance,
 		DistanceUnit:        data.DistanceUnit,
 		Status:              bda.Pending,
-		LocationSameAsOwner: false, // TODO: Update with user input value
+		LocationSameAsOwner: data.LocationSameAsOwner,
 	})
 	if err != nil {
 		return
@@ -169,7 +173,6 @@ func (gr *socialGraph) ListAdsWithFilters(ctx context.Context, data *dtm.ListFil
 
 		ads = append(ads, &dtm.AdForList{
 			Key:       ad.Key,
-			Title:     ad.Title,
 			ImageUrl:  coverImgUrl,
 			Rent:      ad.Rent,
 			Beds:      ad.Beds,

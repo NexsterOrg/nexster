@@ -1,19 +1,17 @@
 package dtomapper
 
 type CreateAdDto struct {
-	Title        string   `json:"title" validate:"required,max=255"`
-	Description  string   `json:"description" validate:"max=1000"`
-	Bills        string   `json:"bills" validate:"required,oneof=include exclude"`
-	ImageUrls    []string `json:"imageUrls" validate:"required,min=1,max=5"`
-	Rent         int      `json:"rent" validate:"required,gt=0"`
-	Address      string   `json:"address" validate:"required,max=255"`
-	Beds         int      `json:"beds" validate:"required,gt=0"`
-	Baths        int      `json:"baths" validate:"required,gt=0"`
-	Gender       string   `json:"gender" validate:"required,oneof=boys girls any"`
-	Distance     float32  `json:"distance" validate:"required"` // TODO: Need to get this from google map.
-	DistanceUnit string   `json:"distanceUnit" validate:"required,oneof=m km"`
-	// LocationSameAsOwner bool `json:"locationSameAsOwner" validate:"required"` --> if this is true address or anyother location related info
-	// for an Ad is not required. This is a TODO work.
+	Description         string   `json:"description" validate:"max=1000"`
+	Bills               string   `json:"bills" validate:"required,oneof=include exclude"`
+	ImageUrls           []string `json:"imageUrls" validate:"required,min=1,max=5"`
+	Rent                int      `json:"rent" validate:"required,gt=0"`
+	Address             string   `json:"address" validate:"max=255"`
+	Beds                int      `json:"beds" validate:"required,gt=0"`
+	Baths               int      `json:"baths" validate:"required,gt=0"`
+	Gender              string   `json:"gender" validate:"required,oneof=boys girls any"`
+	Distance            float32  `json:"distance" validate:"required"` // TODO: Need to get this from google map.
+	DistanceUnit        string   `json:"distanceUnit" validate:"required,oneof=m km"`
+	LocationSameAsOwner bool     `json:"locationSameAsOwner" validate:"required"`
 }
 
 type CreateBoardingOwner struct {
@@ -72,7 +70,6 @@ type ListFilterQueryParams struct {
 
 type AdForList struct {
 	Key       string  `json:"key"`
-	Title     string  `json:"title"`
 	ImageUrl  string  `json:"imageUrl"`
 	Rent      int     `json:"rent"`
 	Beds      int     `json:"beds"`

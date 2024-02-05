@@ -24,7 +24,6 @@ type Interface interface {
 
 type BoardingAds struct {
 	Key                 string   `json:"_key"`
-	Title               string   `json:"title"`
 	Description         string   `json:"description"`
 	Bills               string   `json:"bills"`
 	ImageUrls           []string `json:"imageUrls"`
@@ -57,7 +56,6 @@ type BdAdsWithOwner struct {
 // List ads
 type AdInfoForList struct {
 	Key                 string   `json:"key"`
-	Title               string   `json:"title"`
 	ImageUrls           []string `json:"imageUrls"`
 	Rent                int      `json:"rent"`
 	Beds                int      `json:"beds"`
