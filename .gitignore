@@ -6,6 +6,7 @@ go.sum
 /usrmgmt/configs
 /space/configs
 /search/configs
+/boarding_finder/configs
 *.log
 /logs
 /*/configs
