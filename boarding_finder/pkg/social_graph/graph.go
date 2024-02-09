@@ -61,7 +61,7 @@ func (gr *socialGraph) CreateAd(ctx context.Context, bdOwnerKey string, data *dt
 		Gender:              data.Gender,
 		Distance:            data.Distance,
 		DistanceUnit:        data.DistanceUnit,
-		Status:              bda.Pending,
+		Status:              bda.Accepted, // TODO: Put to pending stage, once reviewer capabilities are there
 		LocationSameAsOwner: data.LocationSameAsOwner,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func (gr *socialGraph) CreateBoardingOwner(ctx context.Context, data *dtm.Create
 		ImageUrl:      data.ImageUrl,
 		Address:       data.Address,
 		Location:      data.Location,
-		Status:        bdo.Pending,
+		Status:        bdo.Active, // TODO: Put to pending stage, once reviewer capabilities are there
 		Roles:         roles,
 	})
 	return
