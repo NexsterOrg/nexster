@@ -11,7 +11,7 @@ type CreateAdDto struct {
 	Gender              string   `json:"gender" validate:"required,oneof=boys girls any"`
 	Distance            float32  `json:"distance" validate:"required"` // TODO: Need to get this from google map.
 	DistanceUnit        string   `json:"distanceUnit" validate:"required,oneof=m km"`
-	LocationSameAsOwner bool     `json:"locationSameAsOwner" validate:"required"`
+	LocationSameAsOwner bool     `json:"locationSameAsOwner"`
 }
 
 type CreateBoardingOwner struct {
