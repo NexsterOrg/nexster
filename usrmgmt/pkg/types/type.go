@@ -39,6 +39,7 @@ type AccessTokenBody struct {
 
 type AccountCreationLinkBody struct {
 	IndexNo string `json:"index" validate:"required"`
+	Email   string `json:"email" validate:"required,email"`
 }
 
 /*
@@ -48,6 +49,7 @@ TODO: Validations & Transformations
 
 type LinkCreationParams struct {
 	IndexNo   string `json:"index" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
 	ExpiredAt string `json:"exp" validate:"required"`
 	Hmac      string `json:"hmac" validate:"required"`
 }
@@ -56,6 +58,7 @@ type AccCreateBody struct {
 	FirstName  string `json:"firstName" validate:"required"`
 	SecondName string `json:"secondName" validate:"required"`
 	IndexNo    string `json:"index" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
 	ImageId    string `json:"imageId" validate:"required"`
 	Birthday   string `json:"birthday" validate:"required"`
 	Faculty    string `json:"faculty" validate:"required"`

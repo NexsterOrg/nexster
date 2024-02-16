@@ -48,6 +48,10 @@ const getUserKey string = `FOR user IN users
 	LIMIT 1
 	RETURN user._key`
 
+const getUserKeyByIndexEmailQry string = `FOR user IN users
+	FILTER user.index_no == @indexNo || user.email == @email
+	RETURN user._key`
+
 const listFriendReqs string = `FOR v,e IN 1..1 INBOUND
 	@userNode friendRequest
 	SORT e.req_date DESC
@@ -342,10 +346,30 @@ func (sgr *socialGraph) GetUserKeyByIndexNo(ctx context.Context, indexNo string)
 	if resLn == 0 {
 		return "", nil
 	}
-	if len(res) > 1 {
+	if resLn > 1 {
 		return "", fmt.Errorf("indexNo=%s is not unique, array of userkeys exists", indexNo)
 	}
 	return *res[0], err
+}
+
+// return error if not unique
+func (sgr *socialGraph) ExistUserForIndexEmail(ctx context.Context, indexNo, email string) (bool, error) {
+	indexNo = strings.ToLower(indexNo)
+	res, err := sgr.usrCtrler.ListStrings(ctx, getUserKeyByIndexEmailQry, map[string]interface{}{
+		"indexNo": indexNo,
+		"email":   email,
+	})
+	if err != nil {
+		return false, err
+	}
+	resLn := len(res)
+	if resLn == 0 {
+		return false, nil
+	}
+	if resLn > 1 {
+		return true, errs.NewConflictError(fmt.Sprintf("multiple users exist for index=%s, email=%s", indexNo, email))
+	}
+	return true, nil
 }
 
 func (sgr *socialGraph) UpdateUser(ctx context.Context, userId string, data map[string]interface{}) error {
@@ -438,7 +462,8 @@ func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, id, givenP
 	return
 }
 
-func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error) {
+// TODO: Need to add roles (students)
+func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateBody, defaultRoles []string) (string, error) {
 	newPasswdHash, err := pwd.HashPassword(data.Password)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %v", err)
@@ -450,7 +475,7 @@ func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateB
 		SecondName: data.SecondName,
 		Username:   "",
 		IndexNo:    data.IndexNo,
-		Email:      "",
+		Email:      data.Email,
 		ImageUrl:   data.ImageId, // avatar/47193434.jpg
 		Birthday:   data.Birthday,
 		Faculty:    data.Faculty,
@@ -459,6 +484,7 @@ func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateB
 		About:      data.About,
 		Gender:     data.Gender,
 		Password:   newPasswdHash,
+		Roles:      defaultRoles,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create user document: %v", err)

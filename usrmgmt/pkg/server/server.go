@@ -586,36 +586,34 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 
 	data, err := typ.ReadJsonBody[typ.AccountCreationLinkBody](r)
 
-	// experimental purpose. Restricing users - TODO: REMOVE THIS...
-	// test users (namal, asiri, hiroshan, idunil, dileesha, ishan, santhusa)
-	// testUsers := []string{"180173f", "180609b", "180245e", "180653d", "180301a", "180172c", "180326e", "180237g"}
-	// if !ustr.IsInArray(testUsers, data.IndexNo) {
-	// 	s.logger.Infof("failed to send account creation link: user is not allow to create accounts: indexNo=%s", data.IndexNo)
-	// 	s.sendRespDefault(w, http.StatusUnauthorized, respBody)
-	// 	return
-	// }
-
 	if err != nil {
 		s.logger.Infof("failed to send account creation link: failed to read request body: %v", err)
 		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
-		s.logger.Infof("failed to send account creation link: required fields are not in password reset json content, %v", err)
+		s.logger.Infof("failed to send account creation link: required fields are missing, %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if !umail.IsValidEmailV1(data.Email) && !umail.IsValidEmailV2(data.Email) {
+		s.logger.Info("failed to send account creation link: invalid email")
 		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 
-	// TODO:
-	// Allow only for predetermined index no: (eg: by looking at first three characters in index number.)
-
-	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), data.IndexNo)
+	isExist, err := s.scGraph.ExistUserForIndexEmail(r.Context(), data.IndexNo, data.Email)
+	if errors.IsConflictError(err) {
+		s.logger.Errorf("failed to send account creation link: multiple accounts are already exist: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
 	if err != nil {
-		s.logger.Errorf("failed to send account creation link: unable to get user key: %v", err)
+		s.logger.Errorf("failed to send account creation link: unable to find the existence of the user: %v", err)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	if userKey != "" {
+	if isExist {
 		s.logger.Info("failed to send account creation link: account is already exist.")
 		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
@@ -624,11 +622,11 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 	// 30 min account creation link
 	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(30), 10)
 
-	accountCreationLink := fmt.Sprintf("%s/%s?index=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FrontendPath,
-		data.IndexNo, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.IndexNo, expiredAt),
+	accountCreationLink := fmt.Sprintf("%s/%s?index=%s&email=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FrontendPath,
+		data.IndexNo, data.Email, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.IndexNo, data.Email, expiredAt),
 	)
 
-	if err = s.mailClient.SendEmail(fmt.Sprintf("%s@uom.lk", data.IndexNo), subjectOfMail, fmt.Sprintf(htmlMailBody, accountCreationLink)); err != nil {
+	if err = s.mailClient.SendEmail(data.Email, subjectOfMail, fmt.Sprintf(htmlMailBody, accountCreationLink)); err != nil {
 		s.logger.Errorf("failed to send account creation link: unable to send the mail: %v", err)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
@@ -648,13 +646,13 @@ func (s *server) ValidateLinkCreationParams(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err = vdtor.New().Struct(data); err != nil {
-		s.logger.Infof("failed to verify link creation params: required fields are not in password reset json content, %v", err)
+		s.logger.Infof("failed to verify link creation params: required fields are missing: %v", err)
 		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
 
 	// hmac validation
-	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.ExpiredAt) {
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.Email, data.ExpiredAt) {
 		s.logger.Info("failed to verify link creation params: hmac valdiation failed")
 		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
@@ -673,13 +671,18 @@ func (s *server) ValidateLinkCreationParams(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userKey, err := s.scGraph.GetUserKeyByIndexNo(r.Context(), data.IndexNo)
+	isExist, err := s.scGraph.ExistUserForIndexEmail(r.Context(), data.IndexNo, data.Email)
+	if errors.IsConflictError(err) {
+		s.logger.Errorf("failed to verify link creation params: multiple accounts are already exist: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
 	if err != nil {
-		s.logger.Errorf("failed to verify link creation params: unable to get user key: %v", err)
+		s.logger.Errorf("failed to verify link creation params: unable to check the existance: %v", err)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
 		return
 	}
-	if userKey != "" {
+	if isExist {
 		s.logger.Info("failed to verify link creation params: account is already exist.")
 		s.sendRespDefault(w, http.StatusConflict, respBody)
 		return
@@ -704,11 +707,16 @@ func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ htt
 		s.sendRespDefault(w, http.StatusBadRequest, respBody)
 		return
 	}
+	if !umail.IsValidEmailV1(data.Email) && !umail.IsValidEmailV2(data.Email) {
+		s.logger.Info("failed to create account: invalid email")
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
 
 	data = typ.TransformToAccCreateData(data)
 
 	// hmac validation
-	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.ExpiredAt) {
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.IndexNo, data.Email, data.ExpiredAt) {
 		s.logger.Info("failed to create account: hmac valdiation failed")
 		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
 		return
@@ -741,7 +749,7 @@ func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ htt
 	}
 
 	// Create user node
-	createdUserKey, err := s.scGraph.CreateUserNode(r.Context(), data)
+	createdUserKey, err := s.scGraph.CreateUserNode(r.Context(), data, s.config.DefaultUserRoles)
 	if err != nil {
 		s.logger.Errorf("failed to create account: %v", err)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)

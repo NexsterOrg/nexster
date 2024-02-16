@@ -25,5 +25,6 @@ type Interface interface {
 	DeleteUser(ctx context.Context, userId string) error
 	ResetPassword(ctx context.Context, userKey, givenOldPasswd, newPasswd string) error
 	ValidatePasswordForToken(ctx context.Context, id, givenPasswd, consumerType string) (userKey string, roles []string, err error)
-	CreateUserNode(ctx context.Context, data *typ.AccCreateBody) (string, error)
+	CreateUserNode(ctx context.Context, data *typ.AccCreateBody, defaultRoles []string) (string, error)
+	ExistUserForIndexEmail(ctx context.Context, indexNo, email string) (bool, error)
 }

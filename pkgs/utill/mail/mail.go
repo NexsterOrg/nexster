@@ -1,6 +1,8 @@
 package mail
 
 import (
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-mail/mail"
@@ -30,4 +32,23 @@ func (mc *mailClient) SendEmail(to, subject, htmlMailBody string) error {
 	m.SetBody("text/html", htmlMailBody)
 
 	return mc.dialer.DialAndSend(m)
+}
+
+func IsValidEmailDomain(email, validDomain string) bool {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return false
+	}
+
+	return parts[1] == validDomain
+}
+
+// Email format: <6 digits><alphabeticalCharacter>@uom.lk
+func IsValidEmailV1(email string) bool {
+	return regexp.MustCompile(`^\d{6}[a-zA-Z]@uom\.lk$`).MatchString(email)
+}
+
+// Email format: <name>.<batch>@uom.lk
+func IsValidEmailV2(email string) bool {
+	return regexp.MustCompile(`^[a-zA-Z]+\.([0-9]{2})@uom\.lk$`).MatchString(email)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
 	driver "github.com/arangodb/go-driver"
 
@@ -56,10 +55,6 @@ func MkUserDocId(key string) string {
 // Create username for a user
 func CreateUsername(firstName, secondName string) string {
 	return fmt.Sprintf("%s %s", firstName, secondName)
-}
-
-func CreateUniEmail(indexNo string) string {
-	return fmt.Sprintf("%s@%s", strings.ToLower(indexNo), uniEmailExtension)
 }
 
 // Return [{}, {}, {}]. json objects can have string type of values for fields.
@@ -176,7 +171,6 @@ func (uc *userCtrler) DeleteUser(ctx context.Context, key string) error {
 func (uc *userCtrler) CreateDocument(ctx context.Context, doc *UserCreateInfo) (string, error) {
 	doc.Key = utuid.GenUUID4()
 	doc.Username = CreateUsername(doc.FirstName, doc.SecondName)
-	doc.Email = CreateUniEmail(doc.IndexNo)
 
 	_, err := uc.argClient.Coll.CreateDocument(ctx, doc)
 	if err != nil {
