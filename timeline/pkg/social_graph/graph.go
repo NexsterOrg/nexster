@@ -401,19 +401,21 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 	if err != nil {
 		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", pfGender, err)
 	}
+	pfUsersFiltered := []*map[string]string{}
 	for _, pfUser := range pfUsers {
 		if (*pfUser)["key"] == "" {
 			continue
 		}
 		score := sgr.facRepo.GetPriority(strings.ToLower((*pfUser)["faculty"]), pfGender, facWithGender) * ageMatch((*pfUser)["birthday"], birthday, pfGender, gender)
 		(*pfUser)["score"] = strconv.Itoa(score)
+		pfUsersFiltered = append(pfUsersFiltered, pfUser)
 	}
-	sort.Slice(pfUsers, func(i, j int) bool {
-		valI, err := strconv.Atoi((*pfUsers[i])["score"])
+	sort.Slice(pfUsersFiltered, func(i, j int) bool {
+		valI, err := strconv.Atoi((*pfUsersFiltered[i])["score"])
 		if err != nil {
 			return false
 		}
-		valJ, err := strconv.Atoi((*pfUsers[j])["score"])
+		valJ, err := strconv.Atoi((*pfUsersFiltered[j])["score"])
 		if err != nil {
 			return false
 		}
@@ -428,19 +430,22 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 	if err != nil {
 		return []*map[string]string{}, fmt.Errorf("failed to list %s gender users: %v", gender, err)
 	}
+
+	otherUsersFiltered := []*map[string]string{}
 	for _, otherUser := range otherUsers {
 		if (*otherUser)["key"] == "" {
 			continue
 		}
 		score := sgr.facRepo.GetPriority(strings.ToLower((*otherUser)["faculty"]), gender, facWithGender) * ageMatch((*otherUser)["birthday"], birthday, gender, gender)
 		(*otherUser)["score"] = strconv.Itoa(score)
+		otherUsersFiltered = append(otherUsersFiltered, otherUser)
 	}
-	sort.Slice(otherUsers, func(i, j int) bool {
-		valI, err := strconv.Atoi((*otherUsers[i])["score"])
+	sort.Slice(otherUsersFiltered, func(i, j int) bool {
+		valI, err := strconv.Atoi((*otherUsersFiltered[i])["score"])
 		if err != nil {
 			return false
 		}
-		valJ, err := strconv.Atoi((*otherUsers[j])["score"])
+		valJ, err := strconv.Atoi((*otherUsersFiltered[j])["score"])
 		if err != nil {
 			return false
 		}
@@ -449,8 +454,8 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 	// 3:1 ratio
 	pfExpCount, otherExpCount := genderBasedCount(pageSize)
 
-	pfResults, pfCount := Split(pfUsers, page, pfExpCount)
-	otherResults, otherCount := Split(otherUsers, page, otherExpCount)
+	pfResults, pfCount := Split(pfUsersFiltered, page, pfExpCount)
+	otherResults, otherCount := Split(otherUsersFiltered, page, otherExpCount)
 
 	combinedResult := make([]*map[string]string, pfCount+otherCount)
 	copy(combinedResult, pfResults)
