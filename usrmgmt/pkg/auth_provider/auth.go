@@ -13,11 +13,12 @@ const (
 	AccCreatePath               string = "/usrmgmt/auth/reg"
 	PasswordResetLinkPath       string = "/usrmgmt/auth/password/reset-link"
 	ForgotPasswordResetPath     string = "/usrmgmt/auth/password/reset"
+	ValidatePasswordResetPath   string = "/usrmgmt/auth/password/reset-validation"
 )
 
 var allowPaths []string = []string{
 	AccessTokenPath, AccountCreationLinkPath, AccCreationLinkValidatePath,
-	AccCreatePath, PasswordResetLinkPath, ForgotPasswordResetPath,
+	AccCreatePath, PasswordResetLinkPath, ForgotPasswordResetPath, ValidatePasswordResetPath,
 }
 
 type authProvider struct {

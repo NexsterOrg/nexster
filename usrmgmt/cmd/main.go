@@ -121,6 +121,7 @@ func main() {
 	router.POST(authprv.AccCreatePath, srv.CreateUserAccount)
 	router.POST(authprv.PasswordResetLinkPath, srv.SendPasswordResetLink)
 	router.POST(authprv.ForgotPasswordResetPath, srv.ForgotPasswordReset)
+	router.POST(authprv.ValidatePasswordResetPath, srv.ValidatePasswordResetLink)
 
 	router.PUT("/usrmgmt/profile/edit", srv.EditBasicProfileInfo)
 	router.PUT("/usrmgmt/profile/password", srv.ResetPassword)

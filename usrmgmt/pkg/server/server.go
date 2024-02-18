@@ -883,6 +883,61 @@ func (s *server) ForgotPasswordReset(w http.ResponseWriter, r *http.Request, _ h
 	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
+func (s *server) ValidatePasswordResetLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	data, err := typ.ReadJsonBody[typ.ValidatePasswordResetBody](r)
+	if err != nil {
+		s.logger.Infof("failed to validate password reset: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to validate password reset: required fields are not in req body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if !umail.IsValidEmailV1(data.Email) && !umail.IsValidEmailV2(data.Email) {
+		s.logger.Info("failed to validate password reset: invalid email")
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	// hmac validation
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.Email, data.ExpiredAt) {
+		s.logger.Info("failed to validate password reset: hmac valdiation failed")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	expiredAt, err := ustr.StrToInt64(data.ExpiredAt)
+	if err != nil {
+		s.logger.Infof("failed to validate password reset: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if tm.HasUnixTimeExceeded(expiredAt) {
+		s.logger.Infof("failed to validate password reset: link is expired")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	isExist, err := s.scGraph.ExistUserForEmail(r.Context(), data.Email)
+	if errors.IsConflictError(err) {
+		s.logger.Errorf("failed to validate password reset: multiple accounts are already exist: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed to validate password reset: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if !isExist {
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
+}
+
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 	data := &FriendRequest{}
 	b, err := io.ReadAll(r.Body)
