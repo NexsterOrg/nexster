@@ -11,7 +11,7 @@ const (
 	AccountCreationLinkPath     string = "/usrmgmt/auth/reg-link"
 	AccCreationLinkValidatePath string = "/usrmgmt/auth/reg-link/validate"
 	AccCreatePath               string = "/usrmgmt/auth/reg"
-	// setTokenPath                string = "/usrmgmt/set-token/"
+	PasswordResetLinkPath       string = "/usrmgmt/auth/password/reset-link"
 )
 
 type authProvider struct {
@@ -33,7 +33,7 @@ func (ap *authProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 	if urlPath == AccessTokenPath || urlPath == AccountCreationLinkPath || urlPath == AccCreationLinkValidatePath ||
-		urlPath == AccCreatePath {
+		urlPath == AccCreatePath || urlPath == PasswordResetLinkPath {
 		ap.authCtrler.AuthDisabledServeHTTP(w, r)
 		return
 	}

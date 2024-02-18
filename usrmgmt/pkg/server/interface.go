@@ -50,13 +50,16 @@ type FriendReqAcceptance struct {
 }
 
 type ServerConfig struct {
-	SecretHmacKey      string   `yaml:"secretHmacKey"`
-	FrontendDomain     string   `yaml:"frontendDomain"`
-	FrontendPath       string   `yaml:"frontendPath"`
-	ProjectDir         string   `yaml:"projectDir"`
-	PublicKeyPath      string   `yaml:"publicKeyPath"`
-	PrivateKeyPath     string   `yaml:"privateKeyPath"`
-	AllowedOrigins     []string `yaml:"allowedOrigins"`
-	AllowedEmailDomain string   `yaml:"allowedEmailDomain"`
-	DefaultUserRoles   []string `yaml:"defaultUserRoles"`
+	SecretHmacKey             string   `yaml:"secretHmacKey"`
+	FrontendDomain            string   `yaml:"frontendDomain"`
+	FeAccountRegPath          string   `yaml:"feAccountRegPath"`
+	FePasswdResetLinkPath     string   `yaml:"fePasswdResetLinkPath"`
+	ProjectDir                string   `yaml:"projectDir"`
+	PublicKeyPath             string   `yaml:"publicKeyPath"`
+	PrivateKeyPath            string   `yaml:"privateKeyPath"`
+	AllowedOrigins            []string `yaml:"allowedOrigins"`
+	AllowedEmailDomain        string   `yaml:"allowedEmailDomain"`
+	DefaultUserRoles          []string `yaml:"defaultUserRoles"`
+	RegLinkExpireTime         int      `yaml:"regLinkExpireTime"`
+	PasswdResetLinkExpireTime int      `yaml:"passwdResetLinkExpireTime"`
 }

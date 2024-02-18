@@ -71,8 +71,13 @@ type AccCreateBody struct {
 	Hmac       string `json:"hmac" validate:"required"`
 }
 
+type ForgotPasswordResetLink struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
 type UsrmgmtTypes interface {
-	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams | AccCreateBody
+	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams | AccCreateBody |
+		ForgotPasswordResetLink
 }
 
 // Generic function to read http req json body
@@ -146,11 +151,8 @@ func RemoveEmptyFields[T UsrmgmtTypes](data *T) map[string]interface{} {
 
 /* Account Creation Body
 validation & tranformation
-1. convert first letter for both names to upper case - done
-2. Convert last letter to simple. - done
-3. make sure birthday format is in 2000-01-01
-4. faculty & field validations
-5. gender - all letters should be simple - done
+1. make sure birthday format is in 2000-01-01
+2. faculty & field validations
 */
 
 func TransformToAccCreateData(data *AccCreateBody) *AccCreateBody {

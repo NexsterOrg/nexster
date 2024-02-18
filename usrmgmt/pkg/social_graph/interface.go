@@ -27,4 +27,5 @@ type Interface interface {
 	ValidatePasswordForToken(ctx context.Context, id, givenPasswd, consumerType string) (userKey string, roles []string, err error)
 	CreateUserNode(ctx context.Context, data *typ.AccCreateBody, defaultRoles []string) (string, error)
 	ExistUserForIndexEmail(ctx context.Context, indexNo, email string) (bool, error)
+	ExistUserForEmail(ctx context.Context, email string) (bool, error)
 }

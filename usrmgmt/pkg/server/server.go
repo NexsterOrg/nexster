@@ -40,6 +40,15 @@ const htmlMailBody string = `
 <p>Best regards,<br>The Nexster Team</p>
 `
 
+// password reset related
+const mailSubjectPasswdReset = "Nexster - Password Reset Request"
+const mailBodyPasswdReset string = `
+<p>Hi,</p>
+<p>Please use the following link to reset your password. Link will expire in 10 minutes. </p>
+<p><a href="%s">Link to Reset Your Password</a></p>
+<p>Best regards,<br>The Nexster Team</p>
+`
+
 // Auth Provider Related Configs
 const authProvider string = "usrmgmt"
 const timeline string = "timeline"
@@ -620,9 +629,9 @@ func (s *server) EmailAccountCreationLink(w http.ResponseWriter, r *http.Request
 	}
 
 	// 30 min account creation link
-	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(30), 10)
+	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(s.config.RegLinkExpireTime), 10)
 
-	accountCreationLink := fmt.Sprintf("%s/%s?index=%s&email=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FrontendPath,
+	accountCreationLink := fmt.Sprintf("%s/%s?index=%s&email=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FeAccountRegPath,
 		data.IndexNo, data.Email, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.IndexNo, data.Email, expiredAt),
 	)
 
@@ -759,6 +768,56 @@ func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ htt
 		"state": success,
 		"data":  map[string]string{"id": createdUserKey},
 	})
+}
+
+func (s *server) SendPasswordResetLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	data, err := typ.ReadJsonBody[typ.ForgotPasswordResetLink](r)
+	if err != nil {
+		s.logger.Infof("failed to send password reset link: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to send password reset link: required fields are not in req body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if !umail.IsValidEmailV1(data.Email) && !umail.IsValidEmailV2(data.Email) {
+		s.logger.Info("failed to send password reset link: invalid email")
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	isExist, err := s.scGraph.ExistUserForEmail(r.Context(), data.Email)
+	if errors.IsConflictError(err) {
+		s.logger.Errorf("failed to send password reset link: multiple accounts exist: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed to send password reset link: unable to check the existance: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if !isExist {
+		s.logger.Info("failed to send password reset link: account is not found.")
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+
+	// 10 min password reset link
+	expiredAt := strconv.FormatInt(tm.AddMinToCurrentTime(s.config.PasswdResetLinkExpireTime), 10)
+
+	passwordResetLink := fmt.Sprintf("%s/%s?email=%s&exp=%s&hmac=%s", s.config.FrontendDomain, s.config.FePasswdResetLinkPath,
+		data.Email, expiredAt, hmac.CalculateHMAC(s.config.SecretHmacKey, data.Email, expiredAt),
+	)
+
+	if err = s.mailClient.SendEmail(data.Email, mailSubjectPasswdReset, fmt.Sprintf(mailBodyPasswdReset, passwordResetLink)); err != nil {
+		s.logger.Errorf("failed to send account creation link: unable to send the mail: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
 /*

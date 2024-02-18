@@ -52,6 +52,10 @@ const getUserKeyByIndexEmailQry string = `FOR user IN users
 	FILTER user.index_no == @indexNo || user.email == @email
 	RETURN user._key`
 
+const getUserKeyByEmailQry string = `FOR user IN users
+	FILTER user.email == @email
+	RETURN user._key`
+
 const listFriendReqs string = `FOR v,e IN 1..1 INBOUND
 	@userNode friendRequest
 	SORT e.req_date DESC
@@ -368,6 +372,23 @@ func (sgr *socialGraph) ExistUserForIndexEmail(ctx context.Context, indexNo, ema
 	}
 	if resLn > 1 {
 		return true, errs.NewConflictError(fmt.Sprintf("multiple users exist for index=%s, email=%s", indexNo, email))
+	}
+	return true, nil
+}
+
+func (sgr *socialGraph) ExistUserForEmail(ctx context.Context, email string) (bool, error) {
+	res, err := sgr.usrCtrler.ListStrings(ctx, getUserKeyByEmailQry, map[string]interface{}{
+		"email": email,
+	})
+	if err != nil {
+		return false, err
+	}
+	resLn := len(res)
+	if resLn == 0 {
+		return false, nil
+	}
+	if resLn > 1 {
+		return true, errs.NewConflictError(fmt.Sprintf("multiple users exist for email=%s", email))
 	}
 	return true, nil
 }
