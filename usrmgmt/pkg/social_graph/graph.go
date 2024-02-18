@@ -431,6 +431,30 @@ func (sgr *socialGraph) ResetPassword(ctx context.Context, userKey, givenOldPass
 	})
 }
 
+func (sgr *socialGraph) ForgotPasswordReset(ctx context.Context, email, newPasswd string) error {
+	results, err := sgr.usrCtrler.ListStrings(ctx, getUserKeyByEmailQry, map[string]interface{}{
+		"email": email,
+	})
+	if err != nil {
+		return err
+	}
+
+	ln := len(results)
+	if ln == 0 {
+		return errs.NewNotFoundError(fmt.Sprintf("user not found for email=%s", email))
+	}
+	if ln > 1 {
+		return errs.NewConflictError(fmt.Sprintf("more than one user found for email=%s", email))
+	}
+	newPasswdHash, err := pwd.HashPassword(newPasswd)
+	if err != nil {
+		return fmt.Errorf("failed to hash the password: %v", err)
+	}
+	return sgr.usrCtrler.UpdateUser(ctx, *results[0], map[string]interface{}{
+		"password": newPasswdHash,
+	})
+}
+
 // if password is match userKey, if not UnAuth error will be returned.
 func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, id, givenPasswd, consumerType string) (userKey string, roles []string, err error) {
 	roles = []string{}

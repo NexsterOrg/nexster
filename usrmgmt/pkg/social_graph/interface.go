@@ -28,4 +28,5 @@ type Interface interface {
 	CreateUserNode(ctx context.Context, data *typ.AccCreateBody, defaultRoles []string) (string, error)
 	ExistUserForIndexEmail(ctx context.Context, indexNo, email string) (bool, error)
 	ExistUserForEmail(ctx context.Context, email string) (bool, error)
+	ForgotPasswordReset(ctx context.Context, email, newPasswd string) error
 }

@@ -699,6 +699,11 @@ func (s *server) ValidateLinkCreationParams(w http.ResponseWriter, r *http.Reque
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{"state": success})
 }
 
+/*
+TODO:
+1. faculty, field, birthday, gender & batch validations
+2. password validation. (eg: minLen>8)
+*/
 func (s *server) CreateUserAccount(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	respBody := map[string]interface{}{
 		"state": failed,
@@ -820,11 +825,63 @@ func (s *server) SendPasswordResetLink(w http.ResponseWriter, r *http.Request, _
 	s.sendRespDefault(w, http.StatusOK, respBody)
 }
 
-/*
-TODO:
-1. faculty, field, birthday, gender & batch validations
-2. password validation. (eg: minLen>8)
-*/
+func (s *server) ForgotPasswordReset(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	data, err := typ.ReadJsonBody[typ.ForgotPasswordResetBody](r)
+	if err != nil {
+		s.logger.Infof("failed to reset forgot password: failed to read request body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if err = vdtor.New().Struct(data); err != nil {
+		s.logger.Infof("failed to reset forgot password: required fields are not in req body: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+	if !umail.IsValidEmailV1(data.Email) && !umail.IsValidEmailV2(data.Email) {
+		s.logger.Info("failed to reset forgot password: invalid email")
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	// hmac validation
+	if !hmac.ValidateHMAC(s.config.SecretHmacKey, data.Hmac, data.Email, data.ExpiredAt) {
+		s.logger.Info("failed to reset forgot password: hmac valdiation failed")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	expiredAt, err := ustr.StrToInt64(data.ExpiredAt)
+	if err != nil {
+		s.logger.Infof("failed to reset forgot password: %v", err)
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	if tm.HasUnixTimeExceeded(expiredAt) {
+		s.logger.Infof("failed to reset forgot password: link is expired")
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+
+	err = s.scGraph.ForgotPasswordReset(r.Context(), data.Email, data.Password)
+	if errors.IsNotFoundError(err) {
+		s.logger.Errorf("failed to reset forgot password: user not found: %v", err)
+		s.sendRespDefault(w, http.StatusNotFound, respBody)
+		return
+	}
+	if errors.IsConflictError(err) {
+		s.logger.Errorf("failed to reset forgot password: multiple accounts are already exist: %v", err)
+		s.sendRespDefault(w, http.StatusConflict, respBody)
+		return
+	}
+	if err != nil {
+		s.logger.Errorf("failed to reset forgot password: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
+}
 
 func (s *server) readFriendReqJson(r *http.Request) (*FriendRequest, error) {
 	data := &FriendRequest{}

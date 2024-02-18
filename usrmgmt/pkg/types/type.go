@@ -75,9 +75,16 @@ type ForgotPasswordResetLink struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+type ForgotPasswordResetBody struct {
+	Email     string `json:"email" validate:"required,email"`
+	ExpiredAt string `json:"exp" validate:"required"`
+	Hmac      string `json:"hmac" validate:"required"`
+	Password  string `json:"password" validate:"required"`
+}
+
 type UsrmgmtTypes interface {
 	Profile | PasswordResetInfo | AccessTokenBody | AccountCreationLinkBody | LinkCreationParams | AccCreateBody |
-		ForgotPasswordResetLink
+		ForgotPasswordResetLink | ForgotPasswordResetBody
 }
 
 // Generic function to read http req json body
