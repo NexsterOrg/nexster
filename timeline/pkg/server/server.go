@@ -499,7 +499,7 @@ func (s *server) ListFriendSuggestionsV2(w http.ResponseWriter, r *http.Request,
 	if gender == "" {
 		gender = defaultGender
 	}
-	friends, err := s.scGraph.ListFriendSuggsV2(r.Context(), userKey, birthday, faculty, gender, (pageNo-1)*pageSize, pageSize)
+	friends, err := s.scGraph.ListFriendSuggsV2(r.Context(), userKey, birthday, faculty, gender, pageNo, pageSize)
 	if err != nil {
 		s.logger.Errorf("failed to list friend suggs-v2: %v: userKey=%s", err, userKey)
 		s.sendRespDefault(w, http.StatusInternalServerError, respBody)

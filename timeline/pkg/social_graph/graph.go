@@ -86,7 +86,6 @@ const getUserKey string = `FOR user IN users
 	LIMIT 1
 	RETURN user._key`
 
-// TODO: Add FILTER v._key != userKey
 const listUsersBasedOnGenderQry = `FOR v IN 1..1 INBOUND @genderId hasGender
 	FILTER v._key != @userKey
 	RETURN  { "key": v._key, "username": v.username, "image_url": v.image_url, "batch": v.batch, "indexNo": v.index_no,
@@ -454,8 +453,8 @@ func (sgr *socialGraph) ListFriendSuggsV2(ctx context.Context, userKey, birthday
 	// 3:1 ratio
 	pfExpCount, otherExpCount := genderBasedCount(pageSize)
 
-	pfResults, pfCount := Split(pfUsersFiltered, page, pfExpCount)
-	otherResults, otherCount := Split(otherUsersFiltered, page, otherExpCount)
+	pfResults, pfCount := Split(pfUsersFiltered, (page-1)*pfExpCount, pfExpCount)
+	otherResults, otherCount := Split(otherUsersFiltered, (page-1)*otherExpCount, otherExpCount)
 
 	combinedResult := make([]*map[string]string, pfCount+otherCount)
 	copy(combinedResult, pfResults)
