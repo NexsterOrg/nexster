@@ -27,17 +27,13 @@ const (
 	birthdayLayout string = "2006-01-02" // yy-mm-dd
 )
 
-// TODO
-// 1. Change collection names, field names and other parameter names (eg: friends, mediaOwnerEdges)
-
-// TODO: For users/482201 case return wrong results.
-const recentMediaQuery string = `FOR v,e IN 1..2 INBOUND @userNode friends, mediaOwnerEdges
-	FILTER e.kind == "media_owner" && v.visibility == @visibility
-	&& v.created_date < DATE_ISO8601(@lastPostAt)
-	SORT v.created_date DESC
+const recentMediaQuery string = `FOR md IN media
+	FILTER md.visibility == @visibility && md.created_date < DATE_ISO8601(@lastPostAt)
+	SORT md.created_date DESC
 	LIMIT @noOfPosts
-	RETURN DISTINCT {"media": {"_key": v._key, "link" : v.link, "title" : v.title, 
-	"description" : v.description,"created_date" : v.created_date, "size" : v.size}, "owner_id": e._to}`
+	LET userIds = (FOR v2 IN 1..1 OUTBOUND md._id mediaOwnerEdges RETURN v2._id)
+	RETURN DISTINCT {"media": {"_key": md._key, "link" : md.link, "title" : md.title, 
+	"description" : md.description,"created_date" : md.created_date, "size" : md.size}, "owner_id": userIds[0]}`
 
 const order2FriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	@userNode friends
@@ -126,7 +122,6 @@ func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Int
 func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTimestamp, visibility string, noOfPosts int) ([]*map[string]interface{}, error) {
 	posts := []*map[string]interface{}{}
 	bindVars := map[string]interface{}{
-		"userNode":   sgr.userRepo.MkUserDocId(userId),
 		"lastPostAt": lastPostTimestamp,
 		"noOfPosts":  noOfPosts,
 		"visibility": visibility,
@@ -138,6 +133,9 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 	prefixLn := len(urepo.UsersColl) + 1 // length of "users/"
 
 	for _, media := range medias {
+		if media.OwnerId == "" {
+			continue
+		}
 		user, err2 := sgr.userRepo.GetUser(ctx, media.OwnerId[prefixLn:])
 		if err2 != nil {
 			log.Println(err2)
