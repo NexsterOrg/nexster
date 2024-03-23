@@ -13,6 +13,7 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	jwtAuth "github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
+	"github.com/NamalSanjaya/nexster/pkgs/cache/redis"
 	cl "github.com/NamalSanjaya/nexster/pkgs/client"
 	contapi "github.com/NamalSanjaya/nexster/pkgs/client/content_api"
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
@@ -23,6 +24,9 @@ import (
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
+	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
+	ig "github.com/NamalSanjaya/nexster/timeline/pkg/repository/interest_group"
+	sv "github.com/NamalSanjaya/nexster/timeline/pkg/repository/stem_video"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 )
@@ -31,6 +35,8 @@ type Configs struct {
 	Server           tsrv.ServerConfig   `yaml:"server"`
 	ArgDbCfg         argdb.Config        `yaml:"arangodb"`
 	ContentClientCfg cl.HttpClientConfig `yaml:"content"`
+	RedisCfg         redis.Config        `yaml:"redis"`
+	StemVideoFeed    sv.StemVideoConfig  `yaml:"stemVideoFeed"`
 }
 
 const issuer string = "usrmgmt"
@@ -51,6 +57,12 @@ func main() {
 	logger.EnableColor()
 
 	router := httprouter.New()
+
+	redisClient := redis.NewClient(ctx, &configs.RedisCfg)
+	interestGroupRepo := ig.New(redisClient)
+	stemVideoRepo := sv.New(&configs.StemVideoFeed, redisClient)
+
+	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo)
 
 	// arango db collection clients
 	argRactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, rrepo.ReactionColl)
@@ -73,8 +85,9 @@ func main() {
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
 	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient)
-	srv := tsrv.New(sociGrphCtrler, logger)
+	srv := tsrv.New(sociGrphCtrler, logger, interestArrCmder)
 
+	router.GET("/timeline/stem/videos", srv.VideoFeedForTimeline)
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
 	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 

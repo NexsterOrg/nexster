@@ -12,6 +12,8 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
+	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
@@ -29,16 +31,18 @@ const (
 )
 
 type server struct {
-	scGraph socigr.Interface
-	logger  *lg.Logger
+	scGraph       socigr.Interface
+	logger        *lg.Logger
+	interestArray ia.Interface
 }
 
 var _ Interface = (*server)(nil)
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
+func New(sgrInterface socigr.Interface, logger *lg.Logger, interestArrIntfce ia.Interface) *server {
 	return &server{
-		scGraph: sgrInterface,
-		logger:  logger,
+		scGraph:       sgrInterface,
+		logger:        logger,
+		interestArray: interestArrIntfce,
 	}
 }
 
@@ -102,6 +106,47 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 	}
 	w.Write(body)
 }
+
+func (s *server) VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	userKey, err := jwt.GetUserKey(r.Context())
+	if err != nil {
+		s.logger.Info("failed get video feed: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("pg"))
+	if err != nil || pageNo <= 0 {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pgSize"))
+	if err != nil || pageSize < 0 {
+		pageSize = uh.DefaultPageSize
+	}
+	videos, count, nextPg, err := s.interestArray.ListVideoIdsForFeed(r.Context(), userKey, pageNo, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get video feed: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if nextPg == 2 && pageNo != 1 {
+		pageNo = 1
+	}
+	respBody = map[string]interface{}{
+		"pg":     pageNo,
+		"pgSize": pageSize,
+		"nextPg": nextPg,
+		"count":  count,
+		"data":   videos,
+	}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
+
+/*
+STEPS
+1. Get list of video ids from interestArray
+2. Add the total results count
+*/
 
 // List posts for private timeline, Need Owner Permission
 func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
