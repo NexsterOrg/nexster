@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	gr "github.com/NamalSanjaya/nexster/timeline/pkg/repository/graph_repo"
 	ig "github.com/NamalSanjaya/nexster/timeline/pkg/repository/interest_group"
 	sv "github.com/NamalSanjaya/nexster/timeline/pkg/repository/stem_video"
 	typs "github.com/NamalSanjaya/nexster/timeline/pkg/types"
@@ -16,15 +17,17 @@ type interestArrayCmd struct {
 	stemVideo     sv.Interface
 	interestGroup ig.Interface
 	randGen       *rand.Rand
+	grphrepo      gr.Interface
 }
 
 var _ Interface = (*interestArrayCmd)(nil)
 
-func New(stemVideoIntfce sv.Interface, interestGroupIntfce ig.Interface) *interestArrayCmd {
+func New(stemVideoIntfce sv.Interface, interestGroupIntfce ig.Interface, graphRepoIntfce gr.Interface) *interestArrayCmd {
 	return &interestArrayCmd{
 		stemVideo:     stemVideoIntfce,
 		interestGroup: interestGroupIntfce,
 		randGen:       rand.New(rand.NewSource(time.Now().UnixNano())),
+		grphrepo:      graphRepoIntfce,
 	}
 }
 
@@ -40,6 +43,7 @@ func (iac *interestArrayCmd) ListVideoIdsForFeed(ctx context.Context, userKey st
 
 	endIndex := offset + limit - 1
 	if offset < 0 || endIndex < 0 {
+		err = fmt.Errorf("invalid inputs")
 		return
 	}
 
@@ -57,13 +61,16 @@ func (iac *interestArrayCmd) ListVideoIdsForFeed(ctx context.Context, userKey st
 		nextPg = curPage + 1
 	} else {
 		// Build the interest array
-		fmt.Println("Need to build the interest array")
-		interestGroupIds := []string{"ig1", "ig2", "ig3", "ig4"} // todo: get from the db
+		interestGroupIds, err2 := iac.grphrepo.ListInterestGroups(ctx, userKey)
+		if err2 != nil {
+			err = err2
+			return
+		}
 
-		for _, grpId := range interestGroupIds {
-			vIdsPerGrp, err := iac.interestGroup.ListVideoIdsForGroup(ctx, grpId)
-			if err != nil {
-				log.Println("err building the interest group", err)
+		for _, iGrp := range interestGroupIds {
+			vIdsPerGrp, err2 := iac.interestGroup.ListVideoIdsForGroup(ctx, iGrp.Key)
+			if err2 != nil {
+				log.Println("err building the interest group", err2)
 				continue
 			}
 			videoIds = iac.combineSlicesRandomly(videoIds, vIdsPerGrp)
@@ -76,10 +83,9 @@ func (iac *interestArrayCmd) ListVideoIdsForFeed(ctx context.Context, userKey st
 		// cache video Ids for the user feed
 		err = iac.stemVideo.StoreVideoIdsForUserFeed(ctx, userKey, videoIds)
 		if err != nil {
-			log.Printf("failed to cache video Ids for userkey %s", userKey)
+			log.Printf("failed to cache video Ids for userkey %s: %v", userKey, err)
 		}
 		videoIds = videoIds[0:limit]
-		// page reset
 		nextPg = 2
 	}
 

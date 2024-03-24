@@ -25,6 +25,7 @@ import (
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
+	grrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repository/graph_repo"
 	ig "github.com/NamalSanjaya/nexster/timeline/pkg/repository/interest_group"
 	sv "github.com/NamalSanjaya/nexster/timeline/pkg/repository/stem_video"
 	tsrv "github.com/NamalSanjaya/nexster/timeline/pkg/server"
@@ -58,11 +59,14 @@ func main() {
 
 	router := httprouter.New()
 
+	argdbClient := argdb.NewDbClient(ctx, &configs.ArgDbCfg)
+
 	redisClient := redis.NewClient(ctx, &configs.RedisCfg)
 	interestGroupRepo := ig.New(redisClient)
 	stemVideoRepo := sv.New(&configs.StemVideoFeed, redisClient)
+	grphRepo := grrepo.NewRepo(argdbClient)
 
-	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo)
+	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo, grphRepo)
 
 	// arango db collection clients
 	argRactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, rrepo.ReactionColl)
