@@ -15,7 +15,9 @@ type repo struct {
 var _ Interface = (*repo)(nil)
 
 func NewRepo(argIntfce argdb.Interface) *repo {
-	return &repo{db: argIntfce}
+	return &repo{
+		db: argIntfce,
+	}
 }
 
 func (r *repo) ListInterestGroups(ctx context.Context, userKey string) (grps []*ig.InterestGroup, err error) {
