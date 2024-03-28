@@ -13,10 +13,13 @@ import (
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	intrs "github.com/NamalSanjaya/nexster/pkgs/models/interests"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	utime "github.com/NamalSanjaya/nexster/pkgs/utill/time"
+	ytapi "github.com/NamalSanjaya/nexster/timeline/pkg/client/youtube_api"
 	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
 
@@ -93,29 +96,32 @@ const rmMediaOwnerEdge = `FOR edge IN mediaOwnerEdges
 	RETURN OLD`
 
 type socialGraph struct {
-	mediaRepo     mrepo.Interface
-	userRepo      urepo.Interface
-	reactRepo     rrepo.Interface
-	facRepo       fcrepo.Interface
-	fReqCtrler    freq.Interface
-	frndCtrler    frnd.Interface
-	mdOwnerCtrler mo.Interface
-	conentClient  contapi.Interface
+	mediaRepo       mrepo.Interface
+	userRepo        urepo.Interface
+	reactRepo       rrepo.Interface
+	facRepo         fcrepo.Interface
+	fReqCtrler      freq.Interface
+	frndCtrler      frnd.Interface
+	mdOwnerCtrler   mo.Interface
+	conentClient    contapi.Interface
+	interestsCtrler intrs.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
-	frIntfce freq.Interface, frndIntfce frnd.Interface, mdOwnerIntfce mo.Interface, contentClient contapi.Interface) *socialGraph {
+	frIntfce freq.Interface, frndIntfce frnd.Interface, mdOwnerIntfce mo.Interface, contentClient contapi.Interface,
+	interestIntfce intrs.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo:     mIntfce,
-		userRepo:      uIntfce,
-		reactRepo:     rIntfce,
-		facRepo:       facIntfce,
-		fReqCtrler:    frIntfce,
-		frndCtrler:    frndIntfce,
-		mdOwnerCtrler: mdOwnerIntfce,
-		conentClient:  contentClient,
+		mediaRepo:       mIntfce,
+		userRepo:        uIntfce,
+		reactRepo:       rIntfce,
+		facRepo:         facIntfce,
+		fReqCtrler:      frIntfce,
+		frndCtrler:      frndIntfce,
+		mdOwnerCtrler:   mdOwnerIntfce,
+		conentClient:    contentClient,
+		interestsCtrler: interestIntfce,
 	}
 }
 
@@ -578,6 +584,33 @@ func (sgr *socialGraph) DeleteImagePost(ctx context.Context, userKey, mediaKey s
 	}
 	if err = sgr.conentClient.DeleteImage(ctx, link); err != nil {
 		return fmt.Errorf("failed to delete image from azure blob storage: %v", err)
+	}
+	return nil
+}
+
+func (sgr *socialGraph) StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate int) error {
+	expiredInterests, err := sgr.interestsCtrler.ListExpiredInterests(ctx, interestCountPerUpdate)
+	if err != nil {
+		return fmt.Errorf("failed to store vidoes for the feed: %v", err)
+	}
+
+	for _, interest := range expiredInterests {
+		videos, err := ytClient.SearchYoutubeVideo(ctx, interest.Name, "", 50)
+		if err != nil {
+			log.Printf("failed to search youtube videos for %s: %v\n", interest.Name, err)
+			continue
+		}
+		err = sgr.interestsCtrler.StoreVidoes(ctx, interest.Key, videos)
+		if err != nil {
+			log.Printf("failed to store youtube videos for %s: %v\n", interest.Name, err)
+			continue
+		}
+		err = sgr.interestsCtrler.RenewExpire(ctx, interest.Key, utime.GetRandomDateBetweenDays(14, 28)) // between 14-28 days
+		if err != nil {
+			log.Printf("failed to update the interest expire for %s: %v\n", interest.Name, err)
+			continue
+		}
+		utime.SleepInSecond(2)
 	}
 	return nil
 }

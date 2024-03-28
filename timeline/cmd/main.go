@@ -19,11 +19,14 @@ import (
 	fcrepo "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
+	intrs "github.com/NamalSanjaya/nexster/pkgs/models/interests"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	concr "github.com/NamalSanjaya/nexster/pkgs/utill/concurrency"
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
+	ytapi "github.com/NamalSanjaya/nexster/timeline/pkg/client/youtube_api"
 	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
 	grrepo "github.com/NamalSanjaya/nexster/timeline/pkg/repository/graph_repo"
 	ig "github.com/NamalSanjaya/nexster/timeline/pkg/repository/interest_group"
@@ -59,14 +62,13 @@ func main() {
 
 	router := httprouter.New()
 
-	argdbClient := argdb.NewDbClient(ctx, &configs.ArgDbCfg)
-
+	// redis cache instances
 	redisClient := redis.NewClient(ctx, &configs.RedisCfg)
 	interestGroupRepo := ig.New(redisClient)
 	stemVideoRepo := sv.New(&configs.StemVideoFeed, redisClient)
-	grphRepo := grrepo.NewRepo(argdbClient)
 
-	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo, grphRepo)
+	// arango direct db client
+	argdbClient := argdb.NewDbClient(ctx, &configs.ArgDbCfg)
 
 	// arango db collection clients
 	argRactCollClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, rrepo.ReactionColl)
@@ -76,6 +78,7 @@ func main() {
 	argFrndReqClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, freq.FriendReqColl)
 	argFriendClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
 	argMediaOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, mo.MediaOwnerColl)
+	argInteretsClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, intrs.InterestsColl)
 
 	mediaRepo := mrepo.NewRepo(argMedCollClient)
 	userRepo := urepo.NewCtrler(argUsrCollClient)
@@ -84,12 +87,31 @@ func main() {
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFriendClient)
 	mdOwnerCtrler := mo.NewCtrler(argMediaOwnerClient)
+	interestsCtrler := intrs.NewCtrler(argInteretsClient)
+
+	// graph repository
+	grphRepo := grrepo.NewRepo(argdbClient)
+
+	// interest array repository
+	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo, grphRepo)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient)
-	srv := tsrv.New(sociGrphCtrler, logger, interestArrCmder)
+	// assign youtube clients
+	ytClients := []*ytapi.YoutubeApi{}
+	for _, apiKey := range configs.Server.APIKeys {
+		ytClients = append(ytClients, ytapi.NewClient(ctx, apiKey))
+
+	}
+
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient, interestsCtrler)
+	srv := tsrv.New(&configs.Server, sociGrphCtrler, logger, interestArrCmder, ytClients)
+
+	// Schdule YoutubeFetcher
+	go concr.SchduleRecurringTaskInDays(ctx, "Youtube Fetcher", configs.Server.YoutubeFetcherRecurringInDays, func() {
+		srv.YoutubeAPIFetcher(ctx)
+	})
 
 	router.GET("/timeline/stem/videos", srv.VideoFeedForTimeline)
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline

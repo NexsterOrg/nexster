@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -20,9 +21,12 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type ServerConfig struct {
-	ProjectDir     string   `yaml:"projectDir"`
-	PublicKeyPath  string   `yaml:"publicKeyPath"`
-	AllowedOrigins []string `yaml:"allowedOrigins"`
+	ProjectDir                    string   `yaml:"projectDir"`
+	PublicKeyPath                 string   `yaml:"publicKeyPath"`
+	AllowedOrigins                []string `yaml:"allowedOrigins"`
+	APIKeys                       []string `yaml:"apiKeys"`
+	YoutubeFetcherRecurringInDays int      `yaml:"youtubeFetcherRecurringInDays"`
+	InterestUpdateCount           int      `yaml:"interestUpdateCount"`
 }
 
 type Interface interface {
@@ -38,6 +42,7 @@ type Interface interface {
 	CreateImagePost(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	DeleteImagePost(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	YoutubeAPIFetcher(ctx context.Context)
 }
 
 type Reaction struct {

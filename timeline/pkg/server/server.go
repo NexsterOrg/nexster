@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
+	ytapi "github.com/NamalSanjaya/nexster/timeline/pkg/client/youtube_api"
 	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
@@ -31,18 +33,22 @@ const (
 )
 
 type server struct {
+	configs       *ServerConfig
 	scGraph       socigr.Interface
 	logger        *lg.Logger
 	interestArray ia.Interface
+	ytClients     []*ytapi.YoutubeApi
 }
 
 var _ Interface = (*server)(nil)
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger, interestArrIntfce ia.Interface) *server {
+func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, interestArrIntfce ia.Interface, youtubeClients []*ytapi.YoutubeApi) *server {
 	return &server{
+		configs:       cfg,
 		scGraph:       sgrInterface,
 		logger:        logger,
 		interestArray: interestArrIntfce,
+		ytClients:     youtubeClients,
 	}
 }
 
@@ -657,4 +663,14 @@ func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map
 	w.WriteHeader(statusCode)
 	resp, _ := json.Marshal(body)
 	w.Write(resp)
+}
+
+func (s *server) YoutubeAPIFetcher(ctx context.Context) {
+	s.logger.Info("youtube fetcher started")
+	for _, client := range s.ytClients {
+		if err := s.scGraph.StoreVideosForFeed(ctx, client, s.configs.InterestUpdateCount); err != nil {
+			s.logger.Errorf("failed to store videos: %v", err)
+		}
+	}
+	s.logger.Info("youtube fetcher's work is completed")
 }
