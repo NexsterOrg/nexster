@@ -27,6 +27,8 @@ type ServerConfig struct {
 	APIKeys                       []string `yaml:"apiKeys"`
 	YoutubeFetcherRecurringInDays int      `yaml:"youtubeFetcherRecurringInDays"`
 	InterestUpdateCount           int      `yaml:"interestUpdateCount"`
+	YtMinExpForVideosInDays       int      `yaml:"ytMinExpForVideosInDays"`
+	YtMaxExpForVideosInDays       int      `yaml:"ytMaxExpForVideosInDays"`
 }
 
 type Interface interface {

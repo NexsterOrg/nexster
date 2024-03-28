@@ -107,16 +107,6 @@ func (iac *interestArrayCmd) ListVideoIdsForFeed(ctx context.Context, userKey st
 	return
 }
 
-/*
-1. List video Ids from user feed.
-2. If the list is empty --> build a new one
-3. If creating ---> retry
-4. If Ok
-   4-1. pg, pgSize get the list of video ids.
-   4-2. Loop over each and create the video content.
-   4-3. Return values ListOfVideos, versionNo
-*/
-
 // Combine two slices randomly
 func (iac *interestArrayCmd) combineSlicesRandomly(slice1, slice2 []string) []string {
 	iac.shuffle(slice1)

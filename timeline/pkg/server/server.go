@@ -668,7 +668,8 @@ func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map
 func (s *server) YoutubeAPIFetcher(ctx context.Context) {
 	s.logger.Info("youtube fetcher started")
 	for _, client := range s.ytClients {
-		if err := s.scGraph.StoreVideosForFeed(ctx, client, s.configs.InterestUpdateCount); err != nil {
+		if err := s.scGraph.StoreVideosForFeed(ctx, client, s.configs.InterestUpdateCount, s.configs.YtMinExpForVideosInDays,
+			s.configs.YtMaxExpForVideosInDays); err != nil {
 			s.logger.Errorf("failed to store videos: %v", err)
 		}
 	}

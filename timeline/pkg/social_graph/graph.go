@@ -588,7 +588,7 @@ func (sgr *socialGraph) DeleteImagePost(ctx context.Context, userKey, mediaKey s
 	return nil
 }
 
-func (sgr *socialGraph) StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate int) error {
+func (sgr *socialGraph) StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate, vMinExp, vMaxExp int) error {
 	expiredInterests, err := sgr.interestsCtrler.ListExpiredInterests(ctx, interestCountPerUpdate)
 	if err != nil {
 		return fmt.Errorf("failed to store vidoes for the feed: %v", err)
@@ -605,7 +605,7 @@ func (sgr *socialGraph) StoreVideosForFeed(ctx context.Context, ytClient *ytapi.
 			log.Printf("failed to store youtube videos for %s: %v\n", interest.Name, err)
 			continue
 		}
-		err = sgr.interestsCtrler.RenewExpire(ctx, interest.Key, utime.GetRandomDateBetweenDays(14, 28)) // between 14-28 days
+		err = sgr.interestsCtrler.RenewExpire(ctx, interest.Key, utime.GetRandomDateBetweenDays(vMinExp, vMaxExp)) // between vMinExp-vMaxExp days
 		if err != nil {
 			log.Printf("failed to update the interest expire for %s: %v\n", interest.Name, err)
 			continue

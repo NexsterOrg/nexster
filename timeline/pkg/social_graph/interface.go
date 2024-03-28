@@ -22,5 +22,5 @@ type Interface interface {
 	AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error)
 	CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error)
 	DeleteImagePost(ctx context.Context, userKey, mediaKey string) error
-	StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate int) error
+	StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate, vMinExp, vMaxExp int) error
 }
