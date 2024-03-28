@@ -2,6 +2,8 @@ package time
 
 import (
 	"time"
+
+	umath "github.com/NamalSanjaya/nexster/pkgs/utill/math"
 )
 
 func CurrentUTCTime() string {
@@ -18,4 +20,12 @@ func AddMinToCurrentTime(amountInMin int) int64 {
 
 func HasUnixTimeExceeded(unixTime int64) bool {
 	return unixTime < time.Now().Unix()
+}
+
+func GetRandomDateBetweenDays(n, m int) string {
+	return time.Now().AddDate(0, 0, umath.GetRandValBetweenNumbers(n, m)).Format(time.RFC3339)
+}
+
+func SleepInSecond(secs int) {
+	time.Sleep(time.Duration(secs) * time.Second)
 }
