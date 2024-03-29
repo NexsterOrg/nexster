@@ -14,6 +14,7 @@ type Interface interface {
 	ListExpiredInterests(ctx context.Context, limit int) ([]*InterestForExpiredList, error)
 	RenewExpire(ctx context.Context, key string, newDate string) error
 	StoreVidoes(ctx context.Context, key string, videos []*YoutubeVideo) error
+	ListVideosForInterest(ctx context.Context, userKey string) ([]*YoutubeVideo, error)
 }
 
 type Interest struct {

@@ -9,6 +9,7 @@ import (
 
 	argdb "github.com/NamalSanjaya/nexster/pkgs/arangodb"
 	errs "github.com/NamalSanjaya/nexster/pkgs/errors"
+	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 )
 
 type interestsCtrler struct {
@@ -67,4 +68,27 @@ func (ic *interestsCtrler) StoreVidoes(ctx context.Context, key string, videos [
 	return ic.update(ctx, key, map[string]interface{}{
 		ytVideosField: videos,
 	})
+}
+
+func (ic *interestsCtrler) ListVideosForInterest(ctx context.Context, userKey string) ([]*YoutubeVideo, error) {
+	results := new([]*YoutubeVideo)
+	cursor, err := ic.argClient.Db.Query(ctx, listYtVideosForInterestQry, map[string]interface{}{
+		"userNode": usr.MkUserDocId(userKey),
+	})
+	if err != nil {
+		return *results, err
+	}
+	defer cursor.Close()
+
+	for {
+		result := []*YoutubeVideo{}
+		_, err := cursor.ReadDocument(ctx, &result)
+		if driver.IsNoMoreDocuments(err) {
+			return *results, nil
+		} else if err != nil {
+			log.Println(err)
+			continue
+		}
+		*results = append(*results, result...)
+	}
 }
