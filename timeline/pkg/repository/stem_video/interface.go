@@ -11,9 +11,9 @@ const (
 
 // cache fields
 const (
-	vId         string = "vId" // video ID
-	title       string = "title"
-	publishedAt string = "pubAt"
+	vIdField   string = "vId" // video ID
+	titleField string = "title"
+	pubAtField string = "pubAt"
 )
 
 // properties
@@ -28,6 +28,7 @@ type Interface interface {
 	StoreVideoIdsForUserFeed(ctx context.Context, userKey string, videoIds []string) error
 	ListVideoIdsForUser(ctx context.Context, userKey string, startIndex, endIndex int) ([]string, error)
 	IsUserVideoFeedExist(ctx context.Context, userKey string) (bool, error)
+	StoreVideo(ctx context.Context, videoId, title, pubAt string) error
 }
 
 type StemVideo struct {

@@ -41,17 +41,17 @@ func mkVideoFeedPropKey(userKey string) string {
 }
 
 func (sv *stemVideoCmd) GetContent(ctx context.Context, videoId string) (*StemVideo, error) {
-	content, err := sv.redisClient.GetHashFields(ctx, mkVideoKey(videoId), vId, title, publishedAt)
+	content, err := sv.redisClient.GetHashFields(ctx, mkVideoKey(videoId), vIdField, titleField, pubAtField)
 	if err != nil {
 		return &StemVideo{}, err
 	}
-	if content[vId] == "" {
+	if content[vIdField] == "" {
 		return &StemVideo{}, errs.NewNotFoundError(fmt.Sprintf("hash not found for video id %s", videoId))
 	}
 	return &StemVideo{
-		Id:          content[vId],
-		Title:       content[title],
-		PublishedAt: content[publishedAt],
+		Id:          content[vIdField],
+		Title:       content[titleField],
+		PublishedAt: content[pubAtField],
 	}, nil
 }
 
@@ -82,4 +82,8 @@ func (sv *stemVideoCmd) StoreVideoIdsForUserFeed(ctx context.Context, userKey st
 
 func (sv *stemVideoCmd) IsUserVideoFeedExist(ctx context.Context, userKey string) (bool, error) {
 	return sv.redisClient.Exists(ctx, mkVideoFeedKey(userKey))
+}
+
+func (sv *stemVideoCmd) StoreVideo(ctx context.Context, videoId, title, pubAt string) error {
+	return sv.redisClient.SetHashFieldIfNotExist(ctx, mkVideoKey(videoId), vIdField, videoId, titleField, title, pubAtField, pubAt)
 }

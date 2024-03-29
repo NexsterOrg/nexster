@@ -7,8 +7,6 @@ import (
 	"net/http"
 
 	vdtor "github.com/go-playground/validator/v10"
-
-	"github.com/NamalSanjaya/nexster/pkgs/models/interests"
 )
 
 type Post struct {
@@ -45,5 +43,3 @@ func ReadJsonBody[T TimelineTypes](r *http.Request) (*T, error) {
 	}
 	return data, nil
 }
-
-type YoutubeVideoList []*interests.YoutubeVideo

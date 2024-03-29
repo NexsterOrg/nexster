@@ -93,7 +93,7 @@ func main() {
 	grphRepo := grrepo.NewRepo(argdbClient)
 
 	// interest array repository
-	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo, grphRepo)
+	interestArrCmder := ia.New(stemVideoRepo, interestGroupRepo, grphRepo, interestsCtrler)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
