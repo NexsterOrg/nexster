@@ -51,8 +51,12 @@ func (rc *client) Expire(ctx context.Context, key string, durationInMin int) err
 	return rc.client.Expire(ctx, key, time.Duration(durationInMin)*time.Minute).Err()
 }
 
-func (rc *client) Set(ctx context.Context, key, value string, expireTime time.Duration) error {
-	return rc.client.Set(ctx, key, value, expireTime).Err()
+func (rc *client) Set(ctx context.Context, key, value string, expireTime int) error {
+	return rc.client.Set(ctx, key, value, time.Duration(expireTime)).Err()
+}
+
+func (rc *client) SetIfNotExist(ctx context.Context, key, value string, expireTime int) error {
+	return rc.client.SetNX(ctx, key, value, time.Duration(expireTime)).Err()
 }
 
 func (rc *client) Get(ctx context.Context, key string) (string, error) {
@@ -82,6 +86,17 @@ func (rc *client) LIndex(ctx context.Context, key string, indx int) (string, err
 }
 
 func (rc *client) SetHashFields(ctx context.Context, key string, values ...string) error {
+	return rc.client.HSet(ctx, key, values).Err()
+}
+
+func (rc *client) SetHashFieldIfNotExist(ctx context.Context, key string, values ...string) error {
+	isExist, err := rc.Exists(ctx, key)
+	if err != nil {
+		return err
+	}
+	if isExist {
+		return nil
+	}
 	return rc.client.HSet(ctx, key, values).Err()
 }
 
