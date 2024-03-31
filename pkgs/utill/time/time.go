@@ -29,3 +29,7 @@ func GetRandomDateBetweenDays(n, m int) string {
 func SleepInSecond(secs int) {
 	time.Sleep(time.Duration(secs) * time.Second)
 }
+
+func GetDateGivenDaysFromToday(days int) string {
+	return time.Now().AddDate(0, 0, -days).Format("2006-01-02")
+}
