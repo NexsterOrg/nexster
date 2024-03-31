@@ -45,6 +45,7 @@ type Interface interface {
 	DeleteImagePost(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	YoutubeAPIFetcher(ctx context.Context)
+	ListAllTypePostForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 }
 
 type Reaction struct {

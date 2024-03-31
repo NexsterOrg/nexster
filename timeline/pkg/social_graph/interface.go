@@ -23,4 +23,5 @@ type Interface interface {
 	CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error)
 	DeleteImagePost(ctx context.Context, userKey, mediaKey string) error
 	StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate, vMinExp, vMaxExp int) error
+	ListRecentPostsWithLimit(ctx context.Context, userId, visibility string, offset, limit int) ([]*map[string]interface{}, int, error)
 }

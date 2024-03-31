@@ -38,6 +38,14 @@ const recentMediaQuery string = `FOR md IN media
 	RETURN DISTINCT {"media": {"_key": md._key, "link" : md.link, "title" : md.title, 
 	"description" : md.description,"created_date" : md.created_date, "size" : md.size}, "owner_id": userIds[0]}`
 
+const recentMediaWithLimitQry string = `FOR md IN media
+	FILTER md.visibility == @visibility && md.created_date > DATE_ISO8601(@fromDate)
+	SORT md.created_date DESC
+	LIMIT @offset, @limit
+	LET userIds = (FOR v2 IN 1..1 OUTBOUND md._id mediaOwnerEdges RETURN v2._id)
+	RETURN DISTINCT {"media": {"_key": md._key, "link" : md.link, "title" : md.title, 
+	"description" : md.description,"created_date" : md.created_date, "size" : md.size}, "owner_id": userIds[0]}`
+
 const order2FriendsQuery string = `FOR v,e IN 2..2 OUTBOUND
 	@userNode friends
 	OPTIONS { uniqueVertices: "path" }
@@ -180,11 +188,75 @@ func (sgr *socialGraph) ListRecentPosts(ctx context.Context, userId, lastPostTim
 		posts = append(posts, &map[string]interface{}{
 			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "image_url": imgUrl, "indexNo": user.IndexNo},
 			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
-				"laugh": viewersReacts.Laugh},
+				"laugh": viewersReacts.Laugh}, "type": "image",
 		})
 	}
 
 	return posts, nil
+}
+
+func (sgr *socialGraph) ListRecentPostsWithLimit(ctx context.Context, userId, visibility string, offset, limit int) ([]*map[string]interface{}, int, error) {
+	posts := []*map[string]interface{}{}
+	imgPostCount := 0
+	medias, err := sgr.mediaRepo.ListMediaWithOwner(ctx, recentMediaWithLimitQry, map[string]interface{}{
+		"offset":     offset,
+		"limit":      limit,
+		"visibility": visibility,
+		"fromDate":   utime.GetDateGivenDaysFromToday(30),
+	})
+	if err != nil {
+		return posts, imgPostCount, err
+	}
+	prefixLn := len(urepo.UsersColl) + 1 // length of "users/"
+
+	for _, media := range medias {
+		if media.OwnerId == "" {
+			continue
+		}
+		user, err2 := sgr.userRepo.GetUser(ctx, media.OwnerId[prefixLn:])
+		if err2 != nil {
+			log.Println(err2)
+			continue
+		}
+
+		racts, err2 := sgr.reactRepo.GetReactionsCount(ctx, getReactionQuery, map[string]interface{}{
+			"mediaNode": sgr.mediaRepo.MkMediaDocId(media.Media.Key),
+		})
+		if err2 != nil {
+			log.Println(err2)
+			continue
+		}
+
+		viewersReacts, err2 := sgr.reactRepo.GetViewersReactions(ctx, getViewerReactions, map[string]interface{}{
+			"fromUser": sgr.userRepo.MkUserDocId(userId), "toMedia": sgr.mediaRepo.MkMediaDocId(media.Media.Key),
+		})
+		if err2 != nil {
+			log.Println(err2)
+			continue
+		}
+		permission := sgr.conentClient.GetPermission(user.UserId, userId)
+		mediaLink, err := sgr.conentClient.CreateImageUrl(media.Media.Link, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
+		media.Media.Link = mediaLink
+
+		imgUrl, err := sgr.conentClient.CreateImageUrl(user.ImageUrl, permission)
+		if err != nil {
+			log.Println("failed to create post url: ", err)
+			continue
+		}
+
+		posts = append(posts, &map[string]interface{}{
+			"media": media.Media, "owner": map[string]string{"_key": user.UserId, "name": user.Username, "image_url": imgUrl, "indexNo": user.IndexNo},
+			"reactions": racts, "viewer_reaction": map[string]interface{}{"key": viewersReacts.Key, "like": viewersReacts.Like, "love": viewersReacts.Love,
+				"laugh": viewersReacts.Laugh}, "type": "image",
+		})
+		imgPostCount++
+	}
+
+	return posts, imgPostCount, nil
 }
 
 func (sgr *socialGraph) ListOwnersPosts(ctx context.Context, userKey, lastPostTimestamp string, noOfPosts int) ([]*map[string]interface{}, error) {

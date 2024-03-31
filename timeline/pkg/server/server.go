@@ -148,11 +148,58 @@ func (s *server) VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ 
 	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
 
-/*
-STEPS
-1. Get list of video ids from interestArray
-2. Add the total results count
-*/
+// list both image and video type post for the timeline
+func (s *server) ListAllTypePostForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	userKey, err := jwt.GetUserKey(r.Context())
+	if err != nil {
+		s.logger.Info("failed get post for timeline: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("pg"))
+	if err != nil || pageNo <= 0 {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pgSize"))
+	if err != nil || pageSize < 0 {
+		pageSize = uh.DefaultPageSize
+	}
+	offset := (pageNo - 1) * pageSize
+	imgPost, imgPostCount, err := s.scGraph.ListRecentPostsWithLimit(r.Context(), userKey, "public", offset, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get image post for timeline: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if imgPostCount != 0 {
+		uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{
+			"pg":     pageNo,
+			"pgSize": pageSize,
+			"nextPg": pageNo + 1,
+			"count":  imgPostCount,
+			"data":   imgPost,
+		})
+		return
+	}
+	videos, count, nextPg, err := s.interestArray.ListVideoIdsForFeed(r.Context(), userKey, pageNo, offset, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get video post for timeline: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if nextPg == 2 && pageNo != 1 {
+		pageNo = 1
+	}
+	respBody = map[string]interface{}{
+		"pg":     pageNo,
+		"pgSize": pageSize,
+		"nextPg": nextPg,
+		"count":  count,
+		"data":   videos,
+	}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
 
 // List posts for private timeline, Need Owner Permission
 func (s *server) ListPostsForOwnersTimeline(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

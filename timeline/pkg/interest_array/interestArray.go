@@ -97,7 +97,7 @@ func (iac *interestArrayCmd) ListVideoIdsForFeed(ctx context.Context, userKey st
 		if err != nil {
 			log.Printf("failed to cache video Ids for userkey %s: %v", userKey, err)
 		}
-		nextPg = 2
+		nextPg = curPage + 1
 		err = nil
 		return
 	}
@@ -127,3 +127,31 @@ func (iac *interestArrayCmd) fisherYatesShuffle(slice []*intrs.YoutubeVideo) {
 		slice[i], slice[j] = slice[j], slice[i]
 	}
 }
+
+// func (iac *interestArrayCmd) combineVideoAndImageIds(imgIds, videoIds []string) []string {
+// 	iac.shuffle(imgIds)
+
+// 	ln1 := len(imgIds)
+// 	ln2 := len(videoIds)
+
+// 	// Interleave the elements of both slices
+// 	combined := make([]string, 0, ln1+ln2)
+// 	for i := 0; i < ln1 || i < ln2; i++ {
+// 		if i < ln1 {
+// 			combined = append(combined, imgIds[i])
+// 		}
+// 		if i < ln2 {
+// 			combined = append(combined, videoIds[i])
+// 		}
+// 	}
+
+// 	return combined
+// }
+
+// // Shuffle a slice using a specific random number generator
+// func (iac *interestArrayCmd) shuffle(slice []string) {
+// 	for i := range slice {
+// 		j := iac.randGen.Intn(i + 1)
+// 		slice[i], slice[j] = slice[j], slice[i]
+// 	}
+// }

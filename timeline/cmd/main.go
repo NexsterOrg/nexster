@@ -109,11 +109,13 @@ func main() {
 	srv := tsrv.New(&configs.Server, sociGrphCtrler, logger, interestArrCmder, ytClients)
 
 	// Schdule YoutubeFetcher
+	// TODO: Since we are shutting down the servers, recurring won't work properly. [HIGh]
 	go concr.SchduleRecurringTaskInDays(ctx, "Youtube Fetcher", configs.Server.YoutubeFetcherRecurringInDays, func() {
 		srv.YoutubeAPIFetcher(ctx)
 	})
 
 	router.GET("/timeline/stem/videos", srv.VideoFeedForTimeline)
+	router.GET("/timeline/posts/anytype", srv.ListAllTypePostForTimeline)
 	router.GET("/timeline/recent_posts/:userid", srv.ListRecentPostsForTimeline) // posts for public timeline
 	router.GET("/timeline/my_posts/:userid", srv.ListPostsForOwnersTimeline)     // posts for private/owners timeline
 
