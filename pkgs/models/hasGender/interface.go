@@ -7,6 +7,7 @@ const hasGenderKind string = "has_gender"
 
 type Interface interface {
 	Create(ctx context.Context, data *HasGender) (string, error)
+	DeleteByFromTo(ctx context.Context, fromUserKey, toGenderKey string) error
 }
 
 type HasGender struct {
