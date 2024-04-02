@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 
 	"github.com/NamalSanjaya/nexster/pkgs/auth/jwt"
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	uh "github.com/NamalSanjaya/nexster/pkgs/utill/http"
+	ytapi "github.com/NamalSanjaya/nexster/timeline/pkg/client/youtube_api"
+	ia "github.com/NamalSanjaya/nexster/timeline/pkg/interest_array"
 	socigr "github.com/NamalSanjaya/nexster/timeline/pkg/social_graph"
 	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
@@ -29,16 +33,22 @@ const (
 )
 
 type server struct {
-	scGraph socigr.Interface
-	logger  *lg.Logger
+	configs       *ServerConfig
+	scGraph       socigr.Interface
+	logger        *lg.Logger
+	interestArray ia.Interface
+	ytClients     []*ytapi.YoutubeApi
 }
 
 var _ Interface = (*server)(nil)
 
-func New(sgrInterface socigr.Interface, logger *lg.Logger) *server {
+func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, interestArrIntfce ia.Interface, youtubeClients []*ytapi.YoutubeApi) *server {
 	return &server{
-		scGraph: sgrInterface,
-		logger:  logger,
+		configs:       cfg,
+		scGraph:       sgrInterface,
+		logger:        logger,
+		interestArray: interestArrIntfce,
+		ytClients:     youtubeClients,
 	}
 }
 
@@ -101,6 +111,94 @@ func (s *server) ListRecentPostsForTimeline(w http.ResponseWriter, r *http.Reque
 		s.logger.Errorf("failed convert the list of posts into json for due to %w", err)
 	}
 	w.Write(body)
+}
+
+func (s *server) VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	userKey, err := jwt.GetUserKey(r.Context())
+	if err != nil {
+		s.logger.Info("failed get video feed: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("pg"))
+	if err != nil || pageNo <= 0 {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pgSize"))
+	if err != nil || pageSize < 0 {
+		pageSize = uh.DefaultPageSize
+	}
+	videos, count, nextPg, err := s.interestArray.ListVideoIdsForFeed(r.Context(), userKey, pageNo, (pageNo-1)*pageSize, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get video feed: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if nextPg == 2 && pageNo != 1 {
+		pageNo = 1
+	}
+	respBody = map[string]interface{}{
+		"pg":     pageNo,
+		"pgSize": pageSize,
+		"nextPg": nextPg,
+		"count":  count,
+		"data":   videos,
+	}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
+}
+
+// list both image and video type post for the timeline
+func (s *server) ListAllTypePostForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{}
+	userKey, err := jwt.GetUserKey(r.Context())
+	if err != nil {
+		s.logger.Info("failed get post for timeline: unsupported user_key type in JWT token: unauthorized request")
+		uh.SendDefaultResp(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	pageNo, err := strconv.Atoi(r.URL.Query().Get("pg"))
+	if err != nil || pageNo <= 0 {
+		pageNo = uh.DefaultPageNo
+	}
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pgSize"))
+	if err != nil || pageSize < 0 {
+		pageSize = uh.DefaultPageSize
+	}
+	offset := (pageNo - 1) * pageSize
+	imgPost, imgPostCount, err := s.scGraph.ListRecentPostsWithLimit(r.Context(), userKey, "public", offset, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get image post for timeline: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if imgPostCount != 0 {
+		uh.SendDefaultResp(w, http.StatusOK, map[string]interface{}{
+			"pg":     pageNo,
+			"pgSize": pageSize,
+			"nextPg": pageNo + 1,
+			"count":  imgPostCount,
+			"data":   imgPost,
+		})
+		return
+	}
+	videos, count, nextPg, err := s.interestArray.ListVideoIdsForFeed(r.Context(), userKey, pageNo, offset, pageSize)
+	if err != nil {
+		s.logger.Errorf("failed get video post for timeline: %v", err)
+		uh.SendDefaultResp(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	if nextPg == 2 && pageNo != 1 {
+		pageNo = 1
+	}
+	respBody = map[string]interface{}{
+		"pg":     pageNo,
+		"pgSize": pageSize,
+		"nextPg": nextPg,
+		"count":  count,
+		"data":   videos,
+	}
+	uh.SendDefaultResp(w, http.StatusOK, respBody)
 }
 
 // List posts for private timeline, Need Owner Permission
@@ -612,4 +710,20 @@ func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map
 	w.WriteHeader(statusCode)
 	resp, _ := json.Marshal(body)
 	w.Write(resp)
+}
+
+func (s *server) YoutubeAPIFetcher(ctx context.Context) {
+	s.logger.Info("youtube fetcher started")
+	for _, client := range s.ytClients {
+		if err := s.scGraph.StoreVideosForFeed(ctx, client, s.configs.InterestUpdateCount, s.configs.YtMinExpForVideosInDays,
+			s.configs.YtMaxExpForVideosInDays); err != nil {
+			s.logger.Errorf("failed to store videos: %v", err)
+		}
+	}
+	s.logger.Info("youtube fetcher's work is completed")
+}
+
+// This will be removed once all users have interestIn edge.
+func (s *server) CreateInterestEdgesForExistingUsers(ctx context.Context) {
+	s.scGraph.CreateInteretsInEdgesForExistingUsers(ctx)
 }

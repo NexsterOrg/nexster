@@ -22,6 +22,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
+	intrsIn "github.com/NamalSanjaya/nexster/pkgs/models/interestsIn"
 	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
@@ -62,6 +63,7 @@ func main() {
 	argFacultyClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fac.FacultyColl)
 	argHasGenderClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, hgen.HasGenderColl)
 	argBdOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, bdo.BdOwnerColl)
+	argInterestInClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, intrsIn.InterestsInColl)
 
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
@@ -71,6 +73,7 @@ func main() {
 	facCtrler := fac.NewCtrler(argFacultyClient)
 	hasGenCtrler := hgen.NewCtrler(argHasGenderClient)
 	bdOwnerCtrler := bdo.NewCtrler(argBdOwnerClient)
+	interestInCtrler := intrsIn.NewCtrler(argInterestInClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
@@ -80,7 +83,7 @@ func main() {
 
 	jwtTokenGenarator := gjwt.NewGenerator(issuer, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PrivateKeyPath))
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler, interestInCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient, jwtTokenGenarator)
 
 	router := httprouter.New()

@@ -15,6 +15,7 @@ type Interface interface {
 	CreateForGivenKey(ctx context.Context, data *Media) (string, error)
 	ListStrings(ctx context.Context, query string, bindVars map[string]interface{}) ([]string, error)
 	DeleteDocument(ctx context.Context, mediaKey string) (map[string]interface{}, error)
+	ListMediaAfterGivenDate(ctx context.Context, date string) ([]string, error)
 }
 
 // TODO: Add kind = "media" if needed.

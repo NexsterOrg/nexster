@@ -68,6 +68,10 @@ func (mr *mediaRepo) MkMediaDocId(key string) string {
 	return fmt.Sprintf("%s/%s", MediaColl, key)
 }
 
+func MkMediaDocumentId(key string) string {
+	return fmt.Sprintf("%s/%s", MediaColl, key)
+}
+
 func (mr *mediaRepo) ListMediaWithCustomFields(ctx context.Context, query string, bindVars map[string]interface{}) ([]*map[string]string, error) {
 	var medias []*map[string]string
 	cursor, err := mr.argClient.Db.Query(ctx, query, bindVars)
@@ -134,4 +138,10 @@ func (mr *mediaRepo) DeleteDocument(ctx context.Context, mediaKey string) (map[s
 	ctx = driver.WithReturnOld(ctx, result)
 	_, err := mr.argClient.Coll.RemoveDocument(ctx, mediaKey)
 	return *result, err
+}
+
+func (mr *mediaRepo) ListMediaAfterGivenDate(ctx context.Context, date string) ([]string, error) {
+	return mr.ListStrings(ctx, ListMediaAfterGivenDateQry, map[string]interface{}{
+		"fromDate": date,
+	})
 }

@@ -178,3 +178,7 @@ func (uc *userCtrler) CreateDocument(ctx context.Context, doc *UserCreateInfo) (
 	}
 	return doc.Key, nil
 }
+
+func (uc *userCtrler) ListFacDepOfAllUsers(ctx context.Context) ([]*map[string]string, error) {
+	return uc.ListUsersV2(ctx, listFacDepOfAllUsersQry, map[string]interface{}{})
+}

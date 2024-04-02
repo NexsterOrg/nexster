@@ -4,6 +4,7 @@ import (
 	"context"
 
 	urepo "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	ytapi "github.com/NamalSanjaya/nexster/timeline/pkg/client/youtube_api"
 	tp "github.com/NamalSanjaya/nexster/timeline/pkg/types"
 )
 
@@ -21,4 +22,7 @@ type Interface interface {
 	AttachFriendState(ctx context.Context, reqstorKey, friendKey string) (state string, reqId string, err error)
 	CreateImagePost(ctx context.Context, userKey string, data *tp.Post) (string, string, error)
 	DeleteImagePost(ctx context.Context, userKey, mediaKey string) error
+	StoreVideosForFeed(ctx context.Context, ytClient *ytapi.YoutubeApi, interestCountPerUpdate, vMinExp, vMaxExp int) error
+	ListRecentPostsWithLimit(ctx context.Context, userId, visibility string, offset, limit int) ([]*map[string]interface{}, int, error)
+	CreateInteretsInEdgesForExistingUsers(ctx context.Context)
 }

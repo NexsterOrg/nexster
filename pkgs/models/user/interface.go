@@ -17,6 +17,7 @@ type Interface interface {
 	UpdateUser(ctx context.Context, key string, updateFields map[string]interface{}) error
 	DeleteUser(ctx context.Context, key string) error
 	CreateDocument(ctx context.Context, doc *UserCreateInfo) (string, error)
+	ListFacDepOfAllUsers(ctx context.Context) ([]*map[string]string, error)
 }
 
 // TODO:

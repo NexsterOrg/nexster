@@ -26,3 +26,7 @@ func Min[T Number](num1, num2 T) T {
 func GenRandomNumber() int {
 	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(9000) + 1000
 }
+
+func GetRandValBetweenNumbers(n, m int) int {
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(m-n+1) + n
+}

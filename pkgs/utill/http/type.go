@@ -12,5 +12,5 @@ const (
 	Failed          string = "failed"
 	Success         string = "success"
 	DefaultPageNo   int    = 1
-	DefaultPageSize int    = 10
+	DefaultPageSize int    = 20
 )
