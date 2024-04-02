@@ -13,6 +13,8 @@ import (
 	avtr "github.com/NamalSanjaya/nexster/pkgs/models/avatar"
 	bdo "github.com/NamalSanjaya/nexster/pkgs/models/boardingOwner"
 	fac "github.com/NamalSanjaya/nexster/pkgs/models/faculty"
+	intrsIn "github.com/NamalSanjaya/nexster/pkgs/models/interestsIn"
+
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	gnd "github.com/NamalSanjaya/nexster/pkgs/models/genders"
@@ -87,31 +89,33 @@ const getBdOwnersForLogin string = `FOR v IN boardingOwners
 	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
 
 type socialGraph struct {
-	fReqCtrler      freq.Interface
-	frndCtrler      frnd.Interface
-	usrCtrler       usr.Interface
-	conentClient    contapi.Interface
-	avatarCtrler    avtr.Interface
-	studentCtrler   stdt.Interface
-	facultyCtrler   fac.Interface
-	hasGenderCtrler hgen.Interface
-	bdOwnerCtrler   bdo.Interface
+	fReqCtrler        freq.Interface
+	frndCtrler        frnd.Interface
+	usrCtrler         usr.Interface
+	conentClient      contapi.Interface
+	avatarCtrler      avtr.Interface
+	studentCtrler     stdt.Interface
+	facultyCtrler     fac.Interface
+	hasGenderCtrler   hgen.Interface
+	bdOwnerCtrler     bdo.Interface
+	interestsInCtrler intrsIn.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface, avtrIntfce avtr.Interface,
-	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface, bdOwnerIntfce bdo.Interface) *socialGraph {
+	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface, bdOwnerIntfce bdo.Interface, interestsInIntfce intrsIn.Interface) *socialGraph {
 	return &socialGraph{
-		fReqCtrler:      frIntfce,
-		frndCtrler:      frndIntfce,
-		usrCtrler:       usrIntfce,
-		conentClient:    contentIntfce,
-		avatarCtrler:    avtrIntfce,
-		studentCtrler:   stIntfce,
-		facultyCtrler:   facIntface,
-		hasGenderCtrler: hGenIntface,
-		bdOwnerCtrler:   bdOwnerIntfce,
+		fReqCtrler:        frIntfce,
+		frndCtrler:        frndIntfce,
+		usrCtrler:         usrIntfce,
+		conentClient:      contentIntfce,
+		avatarCtrler:      avtrIntfce,
+		studentCtrler:     stIntfce,
+		facultyCtrler:     facIntface,
+		hasGenderCtrler:   hGenIntface,
+		bdOwnerCtrler:     bdOwnerIntfce,
+		interestsInCtrler: interestsInIntfce,
 	}
 }
 
@@ -397,6 +401,8 @@ func (sgr *socialGraph) UpdateUser(ctx context.Context, userId string, data map[
 	return sgr.usrCtrler.UpdateUser(ctx, userId, data)
 }
 
+// TODO:
+// Need to remove necessary edges when deleting a user node.
 func (sgr *socialGraph) DeleteUser(ctx context.Context, userId string) error {
 	return sgr.usrCtrler.DeleteUser(ctx, userId)
 }
@@ -570,6 +576,15 @@ func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateB
 
 	if err != nil {
 		return "", fmt.Errorf("failed to create hasGender edge: %v", err)
+	}
+
+	// create interestsIn edge
+	facDepName := data.Faculty
+	if facDepName == "Engineering" || data.Field != "" {
+		facDepName = data.Field
+	}
+	if err = sgr.interestsInCtrler.InsertByFacDepName(ctx, facDepName, userKey); err != nil {
+		log.Printf("user creation: failed to create interestIn edge: %v\n", err)
 	}
 
 	return userKey, nil

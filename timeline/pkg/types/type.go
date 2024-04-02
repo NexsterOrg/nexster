@@ -16,6 +16,13 @@ type Post struct {
 	Visibility  string `json:"visibility" validate:"required"`
 }
 
+type StemVideoResp struct {
+	Id          string `json:"vId"`
+	Title       string `json:"title"`
+	PublishedAt string `json:"pubAt"`
+	Type        string `json:"type"`
+}
+
 type TimelineTypes interface {
 	Post
 }
