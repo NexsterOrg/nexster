@@ -11,3 +11,6 @@ const insertDocByFacDepName string = `FOR doc IN interestGroups
 	"_to": doc._id,
 	"kind": @kind
 	} INTO interestsIn`
+
+const listInterestedInEdgeForUserQry string = `FOR v IN 1..1 OUTBOUND @userNode interestsIn
+	RETURN v._key`

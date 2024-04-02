@@ -83,3 +83,13 @@ func (iic *interestsInCtrler) InsertByFacDepName(ctx context.Context, facDepName
 	})
 	return err
 }
+
+func (iic *interestsInCtrler) IsInterestedInEdgeExistForUser(ctx context.Context, userKey string) (bool, error) {
+	edges, err := iic.listStrings(ctx, listInterestedInEdgeForUserQry, map[string]interface{}{
+		"userNode": usr.MkUserDocId(userKey),
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(edges) >= 1, nil
+}

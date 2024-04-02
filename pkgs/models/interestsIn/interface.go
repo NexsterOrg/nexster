@@ -11,6 +11,7 @@ type Interface interface {
 	Delete(ctx context.Context, key string) error
 	DeleteByFromTo(ctx context.Context, fromUserKey, toInterestGroupKey string) error
 	InsertByFacDepName(ctx context.Context, facDepName, fromUserKey string) error
+	IsInterestedInEdgeExistForUser(ctx context.Context, userKey string) (bool, error)
 }
 
 type InterestsIn struct {
