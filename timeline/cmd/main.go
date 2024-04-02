@@ -113,9 +113,10 @@ func main() {
 
 	// Schdule YoutubeFetcher
 	// TODO: Since we are shutting down the servers, recurring won't work properly. [HIGH]
-	go concr.SchduleRecurringTaskInDays(ctx, "Youtube Fetcher", configs.Server.YoutubeFetcherRecurringInDays, func() {
-		srv.YoutubeAPIFetcher(ctx)
-	})
+	go concr.SchduleRecurringTaskInMonth(ctx, "Youtube Fetcher", configs.Server.YoutubeFetcherRecurringInHours,
+		configs.Server.YoutubeFetcherRunOnMonthDay, func() {
+			srv.YoutubeAPIFetcher(ctx)
+		})
 
 	// Only to create interestsIn edges for existing users. Once it is done, this need to be removed.
 	srv.CreateInterestEdgesForExistingUsers(ctx)
