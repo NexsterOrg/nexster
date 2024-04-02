@@ -20,6 +20,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	intrs "github.com/NamalSanjaya/nexster/pkgs/models/interests"
+	intrsIn "github.com/NamalSanjaya/nexster/pkgs/models/interestsIn"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
@@ -79,6 +80,7 @@ func main() {
 	argFriendClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, frnd.FriendColl)
 	argMediaOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, mo.MediaOwnerColl)
 	argInteretsClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, intrs.InterestsColl)
+	argInteretsInClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, intrsIn.InterestsInColl)
 
 	mediaRepo := mrepo.NewRepo(argMedCollClient)
 	userRepo := urepo.NewCtrler(argUsrCollClient)
@@ -88,6 +90,7 @@ func main() {
 	frndCtrler := frnd.NewCtrler(argFriendClient)
 	mdOwnerCtrler := mo.NewCtrler(argMediaOwnerClient)
 	interestsCtrler := intrs.NewCtrler(argInteretsClient)
+	interestsInCtrler := intrsIn.NewCtrler(argInteretsInClient)
 
 	// graph repository
 	grphRepo := grrepo.NewRepo(argdbClient)
@@ -105,14 +108,17 @@ func main() {
 
 	}
 
-	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient, interestsCtrler)
+	sociGrphCtrler := socigr.NewRepo(mediaRepo, userRepo, reactRepo, facRepo, frReqCtrler, frndCtrler, mdOwnerCtrler, contentApiClient, interestsCtrler, interestsInCtrler)
 	srv := tsrv.New(&configs.Server, sociGrphCtrler, logger, interestArrCmder, ytClients)
 
 	// Schdule YoutubeFetcher
-	// TODO: Since we are shutting down the servers, recurring won't work properly. [HIGh]
+	// TODO: Since we are shutting down the servers, recurring won't work properly. [HIGH]
 	go concr.SchduleRecurringTaskInDays(ctx, "Youtube Fetcher", configs.Server.YoutubeFetcherRecurringInDays, func() {
 		srv.YoutubeAPIFetcher(ctx)
 	})
+
+	// Only to create interestsIn edges for existing users. Once it is done, this need to be removed.
+	srv.CreateInterestEdgesForExistingUsers(ctx)
 
 	router.GET("/timeline/stem/videos", srv.VideoFeedForTimeline)
 	router.GET("/timeline/posts/anytype", srv.ListAllTypePostForTimeline)

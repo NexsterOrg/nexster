@@ -46,6 +46,7 @@ type Interface interface {
 	VideoFeedForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	YoutubeAPIFetcher(ctx context.Context)
 	ListAllTypePostForTimeline(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	CreateInterestEdgesForExistingUsers(ctx context.Context)
 }
 
 type Reaction struct {

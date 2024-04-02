@@ -722,3 +722,8 @@ func (s *server) YoutubeAPIFetcher(ctx context.Context) {
 	}
 	s.logger.Info("youtube fetcher's work is completed")
 }
+
+// This will be removed once all users have interestIn edge.
+func (s *server) CreateInterestEdgesForExistingUsers(ctx context.Context) {
+	s.scGraph.CreateInteretsInEdgesForExistingUsers(ctx)
+}

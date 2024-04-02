@@ -14,6 +14,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	intrs "github.com/NamalSanjaya/nexster/pkgs/models/interests"
+	intrsIn "github.com/NamalSanjaya/nexster/pkgs/models/interestsIn"
 	mrepo "github.com/NamalSanjaya/nexster/pkgs/models/media"
 	mo "github.com/NamalSanjaya/nexster/pkgs/models/media_owner"
 	rrepo "github.com/NamalSanjaya/nexster/pkgs/models/reaction"
@@ -104,32 +105,34 @@ const rmMediaOwnerEdge = `FOR edge IN mediaOwnerEdges
 	RETURN OLD`
 
 type socialGraph struct {
-	mediaRepo       mrepo.Interface
-	userRepo        urepo.Interface
-	reactRepo       rrepo.Interface
-	facRepo         fcrepo.Interface
-	fReqCtrler      freq.Interface
-	frndCtrler      frnd.Interface
-	mdOwnerCtrler   mo.Interface
-	conentClient    contapi.Interface
-	interestsCtrler intrs.Interface
+	mediaRepo         mrepo.Interface
+	userRepo          urepo.Interface
+	reactRepo         rrepo.Interface
+	facRepo           fcrepo.Interface
+	fReqCtrler        freq.Interface
+	frndCtrler        frnd.Interface
+	mdOwnerCtrler     mo.Interface
+	conentClient      contapi.Interface
+	interestsCtrler   intrs.Interface
+	interestsInCtrler intrsIn.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewRepo(mIntfce mrepo.Interface, uIntfce urepo.Interface, rIntfce rrepo.Interface, facIntfce fcrepo.Interface,
 	frIntfce freq.Interface, frndIntfce frnd.Interface, mdOwnerIntfce mo.Interface, contentClient contapi.Interface,
-	interestIntfce intrs.Interface) *socialGraph {
+	interestIntfce intrs.Interface, interestsInIntfce intrsIn.Interface) *socialGraph {
 	return &socialGraph{
-		mediaRepo:       mIntfce,
-		userRepo:        uIntfce,
-		reactRepo:       rIntfce,
-		facRepo:         facIntfce,
-		fReqCtrler:      frIntfce,
-		frndCtrler:      frndIntfce,
-		mdOwnerCtrler:   mdOwnerIntfce,
-		conentClient:    contentClient,
-		interestsCtrler: interestIntfce,
+		mediaRepo:         mIntfce,
+		userRepo:          uIntfce,
+		reactRepo:         rIntfce,
+		facRepo:           facIntfce,
+		fReqCtrler:        frIntfce,
+		frndCtrler:        frndIntfce,
+		mdOwnerCtrler:     mdOwnerIntfce,
+		conentClient:      contentClient,
+		interestsCtrler:   interestIntfce,
+		interestsInCtrler: interestsInIntfce,
 	}
 }
 
@@ -685,4 +688,35 @@ func (sgr *socialGraph) StoreVideosForFeed(ctx context.Context, ytClient *ytapi.
 		utime.SleepInSecond(2)
 	}
 	return nil
+}
+
+// This should remove once all existing users have a interestsIn edge.
+func (sgr *socialGraph) CreateInteretsInEdgesForExistingUsers(ctx context.Context) {
+	usersWithFacDepInfo, err := sgr.userRepo.ListFacDepOfAllUsers(ctx)
+	if err != nil {
+		panic(fmt.Errorf("failed to create interestsIn edges for existing users: %v", err))
+	}
+	count := 0
+	for _, info := range usersWithFacDepInfo {
+		facDep := (*info)["faculty"]
+		userKey := (*info)["key"]
+		if facDep == "" || userKey == "" {
+			continue
+		}
+		if facDep == "Engineering" {
+			facDep = (*info)["field"]
+		}
+		isExist, err := sgr.interestsInCtrler.IsInterestedInEdgeExistForUser(ctx, userKey)
+		if err != nil {
+			log.Printf("failed to check the existance of interestsIn edge: userKey=%s\n", userKey)
+		}
+		if isExist {
+			continue
+		}
+		if err = sgr.interestsInCtrler.InsertByFacDepName(ctx, facDep, userKey); err != nil {
+			log.Printf("failed to create interestsIn edge: userKey=%s\n", userKey)
+		}
+		count++
+	}
+	fmt.Println("Created interestsIn edges: ", count)
 }
