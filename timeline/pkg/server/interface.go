@@ -21,14 +21,15 @@ const Date string = "Date"
 const ApplicationJson_Utf8 string = "application/json; charset=utf-8"
 
 type ServerConfig struct {
-	ProjectDir                    string   `yaml:"projectDir"`
-	PublicKeyPath                 string   `yaml:"publicKeyPath"`
-	AllowedOrigins                []string `yaml:"allowedOrigins"`
-	APIKeys                       []string `yaml:"apiKeys"`
-	YoutubeFetcherRecurringInDays int      `yaml:"youtubeFetcherRecurringInDays"`
-	InterestUpdateCount           int      `yaml:"interestUpdateCount"`
-	YtMinExpForVideosInDays       int      `yaml:"ytMinExpForVideosInDays"`
-	YtMaxExpForVideosInDays       int      `yaml:"ytMaxExpForVideosInDays"`
+	ProjectDir                     string   `yaml:"projectDir"`
+	PublicKeyPath                  string   `yaml:"publicKeyPath"`
+	AllowedOrigins                 []string `yaml:"allowedOrigins"`
+	APIKeys                        []string `yaml:"apiKeys"`
+	YoutubeFetcherRecurringInHours int      `yaml:"youtubeFetcherRecurringInHours"`
+	YoutubeFetcherRunOnMonthDay    int      `yaml:"youtubeFetcherRunOnMonthDay"`
+	InterestUpdateCount            int      `yaml:"interestUpdateCount"`
+	YtMinExpForVideosInDays        int      `yaml:"ytMinExpForVideosInDays"`
+	YtMaxExpForVideosInDays        int      `yaml:"ytMaxExpForVideosInDays"`
 }
 
 type Interface interface {

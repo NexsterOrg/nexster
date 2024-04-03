@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func SchduleRecurringTaskInDays(ctx context.Context, name string, noOfDays int, f func()) {
-	gap := time.Duration(noOfDays) * 24 * time.Hour
+func SchduleRecurringTaskInMonth(ctx context.Context, name string, noOfHours, monthDay int, f func()) {
+	gap := time.Duration(noOfHours) * time.Hour
 	timer := time.NewTimer(gap)
 
 	for {
@@ -16,7 +16,9 @@ func SchduleRecurringTaskInDays(ctx context.Context, name string, noOfDays int, 
 			fmt.Println("stopping recurring task, ", name)
 			return
 		case <-timer.C:
-			f()
+			if time.Now().Day() == monthDay {
+				f()
+			}
 			timer.Reset(gap)
 		}
 	}
