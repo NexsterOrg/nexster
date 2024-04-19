@@ -107,6 +107,8 @@ func main() {
 		w.Write([]byte("You are in usrmgmt/test page...!"))
 	})
 
+	
+	router.GET("/usrmgmt/insights/users/all",srv.GetAllUsers) // get all user count 
 	router.GET("/usrmgmt/all/friends", srv.ListFriendInfo)
 	router.GET("/usrmgmt/friends/:user_id/count", srv.GetFriendsCount)
 

@@ -118,6 +118,10 @@ func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce
 		interestsInCtrler: interestsInIntfce,
 	}
 }
+// added discription about the retun values
+func (sgr *socialGraph) GetAllUsers(ctx context.Context, userKey string) (int, int, int, error) { //remove userKey
+	return sgr.usrCtrler.CountOfAllUsers(ctx) // change the function name
+}
 
 func (sgr *socialGraph) ListFriendReqs(ctx context.Context, userKey string, offset, count int) ([]*map[string]string, error) {
 	friendReqs, err := sgr.fReqCtrler.ListStringValueJson(ctx, listFriendReqs, map[string]interface{}{

@@ -33,6 +33,7 @@ type Interface interface {
 	EmailAccountCreationLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	CreateUserAccount(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	ValidatePasswordResetLink(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
+	GetAllUsers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) // all user 
 }
 
 type FriendRequest struct {
@@ -63,4 +64,5 @@ type ServerConfig struct {
 	DefaultUserRoles          []string `yaml:"defaultUserRoles"`
 	RegLinkExpireTime         int      `yaml:"regLinkExpireTime"`
 	PasswdResetLinkExpireTime int      `yaml:"passwdResetLinkExpireTime"`
+
 }
