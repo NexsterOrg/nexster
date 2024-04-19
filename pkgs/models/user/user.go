@@ -182,3 +182,30 @@ func (uc *userCtrler) CreateDocument(ctx context.Context, doc *UserCreateInfo) (
 func (uc *userCtrler) ListFacDepOfAllUsers(ctx context.Context) ([]*map[string]string, error) {
 	return uc.ListUsersV2(ctx, listFacDepOfAllUsersQry, map[string]interface{}{})
 }
+func (uc *userCtrler) CountOfAllUsers(ctx context.Context) (totalUsers, maleUsers, femaleUsers int, err error) {
+	cursor, err := uc.argClient.Db.Query(ctx, getAllUsersCountQry, nil)
+	if err != nil {
+		return
+	}
+	defer cursor.Close()
+
+	if !cursor.HasMore() {
+		err = fmt.Errorf("cursor has no more results")
+		return
+	}
+
+	var result struct {
+		TotalUsers  int `json:"totalUsers"`
+		MaleUsers   int `json:"maleUsers"`
+		FemaleUsers int `json:"femaleUsers"`
+	}
+	_, err = cursor.ReadDocument(ctx, &result)
+	if err != nil {
+		return
+	}
+	totalUsers = result.TotalUsers
+	maleUsers = result.MaleUsers
+	femaleUsers = result.FemaleUsers
+	err = nil
+	return
+}

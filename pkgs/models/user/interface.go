@@ -18,6 +18,8 @@ type Interface interface {
 	DeleteUser(ctx context.Context, key string) error
 	CreateDocument(ctx context.Context, doc *UserCreateInfo) (string, error)
 	ListFacDepOfAllUsers(ctx context.Context) ([]*map[string]string, error)
+	// CountOfAllUsers(ctx context.Context) (int, error)
+	CountOfAllUsers(ctx context.Context) (totalUsers, maleUsers, femaleUsers int, err error)
 }
 
 // TODO:

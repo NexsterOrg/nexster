@@ -1,6 +1,6 @@
 @echo off
 
-set "PROJECT_ROOT_DIR=absolute-path-to-project-root-directory"
+set "PROJECT_ROOT_DIR=E:\nexster-runtime\nexster"
 
 cd /d "%PROJECT_ROOT_DIR%"
 
@@ -34,5 +34,7 @@ start "" /B go run main.go > "%PROJECT_ROOT_DIR%\logs\usrmgmt_server.log" 2>&1
 rem Run boarding_finder server
 cd ..\..\boarding_finder\cmd
 start "" /B go run main.go > "%PROJECT_ROOT_DIR%\logs\bdFinder_server.log" 2>&1
+
+cd /d "%PROJECT_ROOT_DIR%\configs\scripts"
 
 echo --done--

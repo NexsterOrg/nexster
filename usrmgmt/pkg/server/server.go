@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	//"os/user"
 	"strconv"
 	"time"
 
@@ -65,7 +66,7 @@ type server struct {
 	tokenGen   gjwt.Interface
 }
 
-var _ Interface = (*server)(nil)
+var _ Interface = (*server)(nil) 
 
 func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, mailIntfce umail.Interface, jwtTokenGen gjwt.Interface) *server {
 	return &server{
@@ -76,6 +77,33 @@ func New(cfg *ServerConfig, sgrInterface socigr.Interface, logger *lg.Logger, ma
 		tokenGen:   jwtTokenGen,
 	}
 }
+// add a comment
+func (s *server) GetAllUsers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]int{},
+	}
+	jwtUserKey, ok := r.Context().Value(jwt.JwtUserKey).(string)
+	if !ok {
+		s.logger.Infof("failed to count all users: unsupported user_key type in JWT token: unauthorized request: user_key=%v", r.Context().Value(jwt.JwtUserKey))
+		s.sendRespDefault(w, http.StatusUnauthorized, respBody)
+		return
+	}
+	totalUsers, maleUsers, femaleUsers, err := s.scGraph.GetAllUsers(r.Context(), jwtUserKey) //change the function name here
+	if err != nil {
+		s.logger.Errorf("failed to count all users: %v: userKey=%s", err, jwtUserKey)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+	respBody["state"] = success
+	respBody["data"] = map[string]int{
+		"totalUsers":  totalUsers,
+		"maleUsers":   maleUsers,
+		"femaleUsers": femaleUsers,
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
+}
+
 
 func (s *server) ListFriendReqs(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	headers := map[string]string{

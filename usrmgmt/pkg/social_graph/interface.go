@@ -29,4 +29,5 @@ type Interface interface {
 	ExistUserForIndexEmail(ctx context.Context, indexNo, email string) (bool, error)
 	ExistUserForEmail(ctx context.Context, email string) (bool, error)
 	ForgotPasswordReset(ctx context.Context, email, newPasswd string) error
+	GetAllUsers(ctx context.Context, userKey string) (int,int,int, error)
 }
