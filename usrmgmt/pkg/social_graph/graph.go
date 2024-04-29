@@ -19,8 +19,11 @@ import (
 	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
 	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	usi "github.com/NamalSanjaya/nexster/pkgs/models/userInsight"
+	uio "github.com/NamalSanjaya/nexster/pkgs/models/userInsightOf"
 	pwd "github.com/NamalSanjaya/nexster/pkgs/utill/password"
 	strg "github.com/NamalSanjaya/nexster/pkgs/utill/string"
+	tm "github.com/NamalSanjaya/nexster/pkgs/utill/time"
 	typ "github.com/NamalSanjaya/nexster/usrmgmt/pkg/types"
 )
 
@@ -87,31 +90,35 @@ const getBdOwnersForLogin string = `FOR v IN boardingOwners
 	RETURN {"key": v._key, "password":  v.password, "roles": v.roles  }`
 
 type socialGraph struct {
-	fReqCtrler      freq.Interface
-	frndCtrler      frnd.Interface
-	usrCtrler       usr.Interface
-	conentClient    contapi.Interface
-	avatarCtrler    avtr.Interface
-	studentCtrler   stdt.Interface
-	facultyCtrler   fac.Interface
-	hasGenderCtrler hgen.Interface
-	bdOwnerCtrler   bdo.Interface
+	fReqCtrler          freq.Interface
+	frndCtrler          frnd.Interface
+	usrCtrler           usr.Interface
+	conentClient        contapi.Interface
+	avatarCtrler        avtr.Interface
+	studentCtrler       stdt.Interface
+	facultyCtrler       fac.Interface
+	hasGenderCtrler     hgen.Interface
+	bdOwnerCtrler       bdo.Interface
+	userInsightCtrler   usi.Interface
+	userInsightOfCtrler uio.Interface
 }
 
 var _ Interface = (*socialGraph)(nil)
 
 func NewGrphCtrler(frIntfce freq.Interface, frndIntfce frnd.Interface, usrIntfce usr.Interface, contentIntfce contapi.Interface, avtrIntfce avtr.Interface,
-	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface, bdOwnerIntfce bdo.Interface) *socialGraph {
+	stIntfce stdt.Interface, facIntface fac.Interface, hGenIntface hgen.Interface, bdOwnerIntfce bdo.Interface, userInsightCtrler usi.Interface, userInsightOfCtrler uio.Interface) *socialGraph {
 	return &socialGraph{
-		fReqCtrler:      frIntfce,
-		frndCtrler:      frndIntfce,
-		usrCtrler:       usrIntfce,
-		conentClient:    contentIntfce,
-		avatarCtrler:    avtrIntfce,
-		studentCtrler:   stIntfce,
-		facultyCtrler:   facIntface,
-		hasGenderCtrler: hGenIntface,
-		bdOwnerCtrler:   bdOwnerIntfce,
+		fReqCtrler:          frIntfce,
+		frndCtrler:          frndIntfce,
+		usrCtrler:           usrIntfce,
+		conentClient:        contentIntfce,
+		avatarCtrler:        avtrIntfce,
+		studentCtrler:       stIntfce,
+		facultyCtrler:       facIntface,
+		hasGenderCtrler:     hGenIntface,
+		bdOwnerCtrler:       bdOwnerIntfce,
+		userInsightCtrler:   userInsightCtrler,
+		userInsightOfCtrler: userInsightOfCtrler,
 	}
 }
 
@@ -507,6 +514,45 @@ func (sgr *socialGraph) ValidatePasswordForToken(ctx context.Context, id, givenP
 	return
 }
 
+// update last login details
+func (sgr *socialGraph) UpdateUserLastLogin(ctx context.Context, userKey string) error {
+	now := tm.CurrentUTCTime()
+
+	key := fmt.Sprintf("activeUser-%s-%s", userKey, now[:4])
+	_, err := sgr.userInsightCtrler.GetUserInsight(ctx, key)
+	if err != nil {
+		if errs.IsNotFoundError(err) {
+			// add new user insight doc
+			insight := &usi.InsightData{
+				UserId:          userKey,
+				Type:            "activeUser",
+				Year:            now[:4],
+				LoginTimestamps: []string{},
+			}
+			_, err = sgr.userInsightCtrler.CreateUserInsight(ctx, insight)
+			if err != nil {
+				return err
+			}
+
+			// add user insight of doc
+			edge := &uio.UserInsightOf{
+				Key:  "",
+				From: usi.MkUserInsightDocId(key),
+				To:   usr.MkUserDocId(userKey),
+			}
+			_, err = sgr.userInsightOfCtrler.Create(ctx, edge)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			return err
+		}
+	}
+
+	return sgr.userInsightCtrler.AppendLoginTimestamp(ctx, userKey, now)
+}
+
 // TODO: Need to add roles (students)
 func (sgr *socialGraph) CreateUserNode(ctx context.Context, data *typ.AccCreateBody, defaultRoles []string) (string, error) {
 	newPasswdHash, err := pwd.HashPassword(data.Password)
@@ -591,4 +637,8 @@ func getExtensionAndNumber(input string) (valuePart, extension string, err error
 	}
 	valuePart = arr2[1]
 	return
+}
+
+func (sgr *socialGraph) GetActiveUserCountForGivenTimeRange(ctx context.Context, from, to string) (int, error) {
+	return sgr.userInsightCtrler.GetActiveUserCountForGivenTimeRange(ctx, from, to)
 }

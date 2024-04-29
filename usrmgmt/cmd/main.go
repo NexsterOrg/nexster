@@ -24,6 +24,8 @@ import (
 	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
 	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
+	usi "github.com/NamalSanjaya/nexster/pkgs/models/userInsight"
+	uio "github.com/NamalSanjaya/nexster/pkgs/models/userInsightOf"
 	umail "github.com/NamalSanjaya/nexster/pkgs/utill/mail"
 	ustr "github.com/NamalSanjaya/nexster/pkgs/utill/string"
 	authprv "github.com/NamalSanjaya/nexster/usrmgmt/pkg/auth_provider"
@@ -62,6 +64,8 @@ func main() {
 	argFacultyClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fac.FacultyColl)
 	argHasGenderClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, hgen.HasGenderColl)
 	argBdOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, bdo.BdOwnerColl)
+	argUserInsightClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, usi.UserInsightsColl)
+	argUserInsightOfClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, uio.UserInsightOfColl)
 
 	frReqCtrler := freq.NewCtrler(argFrndReqClient)
 	frndCtrler := frnd.NewCtrler(argFrndClient)
@@ -71,6 +75,8 @@ func main() {
 	facCtrler := fac.NewCtrler(argFacultyClient)
 	hasGenCtrler := hgen.NewCtrler(argHasGenderClient)
 	bdOwnerCtrler := bdo.NewCtrler(argBdOwnerClient)
+	userInsightCtrler := usi.NewCtrler(argUserInsightClient)
+	userInsightOfCtrler := uio.NewCtrler(argUserInsightOfClient)
 
 	// API clients
 	contentApiClient := contapi.NewApiClient(&configs.ContentClientCfg)
@@ -80,7 +86,7 @@ func main() {
 
 	jwtTokenGenarator := gjwt.NewGenerator(issuer, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PrivateKeyPath))
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler, userInsightCtrler, userInsightOfCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient, jwtTokenGenarator)
 
 	router := httprouter.New()
@@ -114,6 +120,8 @@ func main() {
 	router.POST("/usrmgmt/friend_req", srv.CreateNewFriendReq)
 	router.POST("/usrmgmt/friend_req/:friend_req_id", srv.CreateFriendLink)
 	router.GET("/usrmgmt/friend_req/count", srv.GetAllFriendReqsCount)
+
+	router.GET("/usrmgmt/insights/users/active", srv.GetActiveUserCountForGivenTimeRange)
 
 	router.POST(authprv.AccessTokenPath, srv.GetAccessToken)
 	router.POST(authprv.AccountCreationLinkPath, srv.EmailAccountCreationLink)
