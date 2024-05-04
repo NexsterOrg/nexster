@@ -22,6 +22,7 @@ import (
 	frnd "github.com/NamalSanjaya/nexster/pkgs/models/friend"
 	freq "github.com/NamalSanjaya/nexster/pkgs/models/friend_request"
 	hgen "github.com/NamalSanjaya/nexster/pkgs/models/hasGender"
+	intrsIn "github.com/NamalSanjaya/nexster/pkgs/models/interestsIn"
 	stdt "github.com/NamalSanjaya/nexster/pkgs/models/student"
 	usr "github.com/NamalSanjaya/nexster/pkgs/models/user"
 	usi "github.com/NamalSanjaya/nexster/pkgs/models/userInsight"
@@ -64,6 +65,7 @@ func main() {
 	argFacultyClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, fac.FacultyColl)
 	argHasGenderClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, hgen.HasGenderColl)
 	argBdOwnerClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, bdo.BdOwnerColl)
+	argInterestInClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, intrsIn.InterestsInColl)
 	argUserInsightClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, usi.UserInsightsColl)
 	argUserInsightOfClient := argdb.NewCollClient(ctx, &configs.ArgDbCfg, uio.UserInsightOfColl)
 
@@ -75,6 +77,7 @@ func main() {
 	facCtrler := fac.NewCtrler(argFacultyClient)
 	hasGenCtrler := hgen.NewCtrler(argHasGenderClient)
 	bdOwnerCtrler := bdo.NewCtrler(argBdOwnerClient)
+	interestInCtrler := intrsIn.NewCtrler(argInterestInClient)
 	userInsightCtrler := usi.NewCtrler(argUserInsightClient)
 	userInsightOfCtrler := uio.NewCtrler(argUserInsightOfClient)
 
@@ -86,7 +89,7 @@ func main() {
 
 	jwtTokenGenarator := gjwt.NewGenerator(issuer, ustr.MkCompletePath(configs.Server.ProjectDir, configs.Server.PrivateKeyPath))
 
-	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler, userInsightCtrler, userInsightOfCtrler)
+	grCtrler := socigr.NewGrphCtrler(frReqCtrler, frndCtrler, usrCtrler, contentApiClient, avtrCtrler, stdtCtrler, facCtrler, hasGenCtrler, bdOwnerCtrler, interestInCtrler, userInsightCtrler, userInsightOfCtrler)
 	srv := usrv.New(&configs.Server, grCtrler, logger, mailClient, jwtTokenGenarator)
 
 	router := httprouter.New()
