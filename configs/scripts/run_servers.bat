@@ -1,6 +1,6 @@
 @echo off
 
-set "PROJECT_ROOT_DIR=absolute-path-to-project-root-directory"
+set "PROJECT_ROOT_DIR=D:\Projects\Nexster\nexster"
 
 cd /d "%PROJECT_ROOT_DIR%"
 

@@ -581,6 +581,13 @@ func (s *server) GetAccessToken(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
+	err = s.scGraph.UpdateUserLastLogin(r.Context(), userKey)
+	if err != nil {
+		s.logger.Errorf("failed to update last login time in social graph layer: %w", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+
 	s.sendRespDefault(w, http.StatusOK, map[string]interface{}{
 		"state": success,
 		"data": map[string]string{
@@ -984,4 +991,40 @@ func (s *server) sendRespDefault(w http.ResponseWriter, statusCode int, body map
 
 func currentUTCTime() string {
 	return time.Now().UTC().Format(time.RFC3339)
+}
+
+func (s *server) GetActiveUserCountForGivenTimeRange(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	respBody := map[string]interface{}{
+		"state": failed,
+		"data":  map[string]string{},
+	}
+
+	from := r.URL.Query().Get("from")
+	if from == "" {
+		s.logger.Info("failed to get active user count: from is empty")
+		s.sendRespDefault(w, http.StatusBadRequest, respBody)
+		return
+	}
+
+	to := r.URL.Query().Get("to")
+	if to == "" {
+		to = tm.CurrentUTCTime()
+	}
+
+	count, err := s.scGraph.GetActiveUserCountForGivenTimeRange(r.Context(), from, to)
+	if err != nil {
+		s.logger.Errorf("failed to get active user count: %v", err)
+		s.sendRespDefault(w, http.StatusInternalServerError, respBody)
+		return
+	}
+
+	respBody = map[string]interface{}{
+		"state": success,
+		"data": map[string]string{
+			"from":            from,
+			"to":              to,
+			"activeUserCount": strconv.Itoa(count),
+		},
+	}
+	s.sendRespDefault(w, http.StatusOK, respBody)
 }

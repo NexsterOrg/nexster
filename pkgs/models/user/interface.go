@@ -42,6 +42,7 @@ type User struct {
 	Gender     string `json:"gender"`
 	Birthday   string `json:"birthday"`
 	IndexNo    string `json:"index_no"`
+	LastLogin  string `json:"lastLogin"`
 }
 
 // username, email
